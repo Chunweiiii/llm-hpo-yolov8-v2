@@ -1,0 +1,277 @@
+[
+  {
+    "iteration": 0,
+    "method": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9572,
+    "map5095": 0.6441,
+    "per_class": {
+      "green light": 0.7038,
+      "red light": 0.7273,
+      "yellow light": 0.5011
+    },
+    "minutes": 8.55,
+    "run_name": "random_v2_s0_i00",
+    "verdict": "baseline"
+  },
+  {
+    "iteration": 1,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.000385,
+      "lrf": 0.140764,
+      "momentum": 0.868711,
+      "weight_decay": 0.000979,
+      "warmup_epochs": 3.686587,
+      "box": 8.964756,
+      "cls": 0.843827,
+      "hsv_v": 0.399309,
+      "mosaic": 0.509579
+    },
+    "map50": 0.9585,
+    "map5095": 0.6602,
+    "per_class": {
+      "green light": 0.6775,
+      "red light": 0.7422,
+      "yellow light": 0.561
+    },
+    "minutes": 8.47,
+    "run_name": "random_v2_s0_i01",
+    "verdict": "improved"
+  },
+  {
+    "iteration": 2,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002161,
+      "lrf": 0.110685,
+      "momentum": 0.962065,
+      "weight_decay": 0.000436,
+      "warmup_epochs": 1.900638,
+      "box": 5.145486,
+      "cls": 0.439981,
+      "hsv_v": 0.203522,
+      "mosaic": 0.578345
+    },
+    "map50": 0.9592,
+    "map5095": 0.6517,
+    "per_class": {
+      "green light": 0.7024,
+      "red light": 0.7143,
+      "yellow light": 0.5384
+    },
+    "minutes": 8.54,
+    "run_name": "random_v2_s0_i02",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 3,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001505,
+      "lrf": 0.100166,
+      "momentum": 0.860644,
+      "weight_decay": 0.000744,
+      "warmup_epochs": 1.289334,
+      "box": 5.055182,
+      "cls": 0.64062,
+      "hsv_v": 0.247083,
+      "mosaic": 0.655519
+    },
+    "map50": 0.9683,
+    "map5095": 0.6534,
+    "per_class": {
+      "green light": 0.6749,
+      "red light": 0.7162,
+      "yellow light": 0.5692
+    },
+    "minutes": 8.56,
+    "run_name": "random_v2_s0_i03",
+    "verdict": "tie"
+  },
+  {
+    "iteration": 4,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.004464,
+      "lrf": 0.082999,
+      "momentum": 0.926521,
+      "weight_decay": 0.001734,
+      "warmup_epochs": 1.914157,
+      "box": 7.578586,
+      "cls": 1.000477,
+      "hsv_v": 0.57888,
+      "mosaic": 0.516091
+    },
+    "map50": 0.9582,
+    "map5095": 0.648,
+    "per_class": {
+      "green light": 0.6881,
+      "red light": 0.7064,
+      "yellow light": 0.5494
+    },
+    "minutes": 8.62,
+    "run_name": "random_v2_s0_i04",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 5,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001889,
+      "lrf": 0.088886,
+      "momentum": 0.908977,
+      "weight_decay": 0.000753,
+      "warmup_epochs": 3.049777,
+      "box": 6.962077,
+      "cls": 0.34909,
+      "hsv_v": 0.367413,
+      "mosaic": 0.51183
+    },
+    "map50": 0.968,
+    "map5095": 0.6554,
+    "per_class": {
+      "green light": 0.6804,
+      "red light": 0.7252,
+      "yellow light": 0.5607
+    },
+    "minutes": 8.45,
+    "run_name": "random_v2_s0_i05",
+    "verdict": "tie"
+  },
+  {
+    "iteration": 6,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002831,
+      "lrf": 0.030719,
+      "momentum": 0.942501,
+      "weight_decay": 0.000674,
+      "warmup_epochs": 4.753301,
+      "box": 5.963592,
+      "cls": 1.214382,
+      "hsv_v": 0.266257,
+      "mosaic": 0.983044
+    },
+    "map50": 0.963,
+    "map5095": 0.6474,
+    "per_class": {
+      "green light": 0.695,
+      "red light": 0.714,
+      "yellow light": 0.533
+    },
+    "minutes": 8.47,
+    "run_name": "random_v2_s0_i06",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 7,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.000521,
+      "lrf": 0.085582,
+      "momentum": 0.864366,
+      "weight_decay": 0.001529,
+      "warmup_epochs": 3.04514,
+      "box": 5.24837,
+      "cls": 0.353769,
+      "hsv_v": 0.494374,
+      "mosaic": 0.577175
+    },
+    "map50": 0.9716,
+    "map5095": 0.673,
+    "per_class": {
+      "green light": 0.7103,
+      "red light": 0.7389,
+      "yellow light": 0.5698
+    },
+    "minutes": 8.43,
+    "run_name": "random_v2_s0_i07",
+    "verdict": "improved"
+  },
+  {
+    "iteration": 8,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002588,
+      "lrf": 0.056904,
+      "momentum": 0.932863,
+      "weight_decay": 0.000561,
+      "warmup_epochs": 2.892674,
+      "box": 9.851681,
+      "cls": 0.402226,
+      "hsv_v": 0.326952,
+      "mosaic": 0.838222
+    },
+    "map50": 0.9631,
+    "map5095": 0.648,
+    "per_class": {
+      "green light": 0.6902,
+      "red light": 0.7174,
+      "yellow light": 0.5363
+    },
+    "minutes": 8.47,
+    "run_name": "random_v2_s0_i08",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 9,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001369,
+      "lrf": 0.102931,
+      "momentum": 0.871052,
+      "weight_decay": 0.00166,
+      "warmup_epochs": 1.925598,
+      "box": 7.761643,
+      "cls": 1.411629,
+      "hsv_v": 0.358952,
+      "mosaic": 0.983934
+    },
+    "map50": 0.9599,
+    "map5095": 0.6581,
+    "per_class": {
+      "green light": 0.7095,
+      "red light": 0.7333,
+      "yellow light": 0.5314
+    },
+    "minutes": 9.28,
+    "run_name": "random_v2_s0_i09",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 10,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.004896,
+      "lrf": 0.015632,
+      "momentum": 0.944336,
+      "weight_decay": 0.001019,
+      "warmup_epochs": 4.766893,
+      "box": 7.034272,
+      "cls": 1.403092,
+      "hsv_v": 0.263659,
+      "mosaic": 0.99739
+    },
+    "map50": 0.9648,
+    "map5095": 0.6359,
+    "per_class": {
+      "green light": 0.6874,
+      "red light": 0.7119,
+      "yellow light": 0.5085
+    },
+    "minutes": 9.27,
+    "run_name": "random_v2_s0_i10",
+    "verdict": "regressed"
+  }
+]

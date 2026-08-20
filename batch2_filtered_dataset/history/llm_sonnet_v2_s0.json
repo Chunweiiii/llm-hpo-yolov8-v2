@@ -1,0 +1,446 @@
+[
+  {
+    "iteration": 0,
+    "backend": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9572,
+    "map5095": 0.6441,
+    "per_class": {
+      "green light": 0.7038,
+      "red light": 0.7273,
+      "yellow light": 0.5011
+    },
+    "minutes": 8.86,
+    "run_name": "llm_sonnet_v2_s0_i00",
+    "verdict": "baseline",
+    "diagnosis": "",
+    "hypothesis": "",
+    "changes": [],
+    "base_iteration": null,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 1,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.961,
+    "map5095": 0.6642,
+    "per_class": {
+      "green light": 0.7151,
+      "red light": 0.7252,
+      "yellow light": 0.5523
+    },
+    "minutes": 9.22,
+    "llm_seconds": 38.7,
+    "run_name": "llm_sonnet_v2_s0_i01",
+    "verdict": "improved",
+    "diagnosis": "The large gap between mAP50 (0.957) and mAP50-95 (0.644) shows the model is finding the traffic lights reliably but not localizing them tightly -- boxes are approximately right but not precise at high-IoU thresholds. The per-class breakdown reinforces this: yellow light has the lowest mAP50-95 (0.50) despite being reported as one of the strongest classes at AP@0.5 in general project notes, meaning its failure mode is localization precision, not detection/classification. The training curve shows val_box loss still falling at epoch 100 (0.945, down from 1.560) with no sign of overfitting (val loss not rising, gap explained by train loss falling faster) -- the box regression head simply hasn't been pushed hard enough or long enough to converge to tight boxes within the 100-epoch/lr-schedule budget. This points to the box regression loss being under-weighted relative to classification loss, not to overfitting or an augmentation problem.",
+    "hypothesis": "Increasing the box loss weight (box) will shift gradient emphasis toward precise coordinate regression relative to classification, which should tighten box localization and raise mAP50-95 specifically at the higher IoU thresholds -- the main gap identified in the diagnosis -- without needing more epochs (which are fixed). Since val_box loss was still actively decreasing at epoch 100, giving it more relative weight should let the model exploit remaining training budget for this exact deficiency, especially benefiting the yellow-light class whose mAP50-95 is far below its expected detection quality.",
+    "changes": [
+      {
+        "param": "box",
+        "from": 7.5,
+        "to": 9.0,
+        "reason": "Directly targets the diagnosed localization-precision gap (mAP50 >> mAP50-95) by increasing gradient weight on box regression relative to classification, addressing the still-decreasing val_box loss trend without altering epoch budget."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 2,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 0.7
+    },
+    "map50": 0.9597,
+    "map5095": 0.6515,
+    "per_class": {
+      "green light": 0.6855,
+      "red light": 0.721,
+      "yellow light": 0.5479
+    },
+    "minutes": 8.96,
+    "llm_seconds": 27.4,
+    "run_name": "llm_sonnet_v2_s0_i02",
+    "verdict": "regressed",
+    "diagnosis": "The loss curves show that at epoch 100 both train_box and val_box are still falling (0.895->0.867 and 1.107->1.093 in the last few epochs) and mAP50-95 is still climbing sharply (0.6528->0.6645), meaning the model has not converged -- it's not overfitting, it's under-trained relative to the difficulty of the localization task. Precision/recall (0.936/0.933) are high, so class discrimination is solid; the bottleneck is coordinate precision, especially at IoU>0.5 where yellow (0.5523) and green light AP50-95 lag far behind their AP50 (~0.96-0.98 implied). Given mosaic=1.0 heavily perturbs scale/context by pasting 4 images together, small traffic-light boxes get shrunk and their local context (pole, housing, sky) fragmented, making tight box regression harder -- this is a plausible driver of the box-loss plateau and the yellow/green localization gap. The box=9.0 change already extracted some gain by reweighting toward localization, but the augmentation itself may be capping how precise regression can get for small objects.",
+    "hypothesis": "Reducing mosaic intensity will let the model see more traffic lights in their natural, undistorted scale/context, improving the precision of box regression at high IoU thresholds -- particularly benefiting yellow and green light classes whose mAP50-95 substantially lags their AP50. This should manifest as a lower val_box loss trajectory and higher mAP50-95 without needing more epochs.",
+    "changes": [
+      {
+        "param": "mosaic",
+        "from": 1.0,
+        "to": 0.7,
+        "reason": "Traffic lights are small objects; heavy mosaic augmentation (full 1.0) distorts scale and fragments context, likely limiting how precisely the box head can localize them at high IoU. Reducing mosaic probability should preserve enough augmentation diversity while giving the model more undistorted views to refine coordinate regression, directly targeting the localization deficit revealed by the still-improving val_box loss at epoch 100."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 3,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.8,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9617,
+    "map5095": 0.6581,
+    "per_class": {
+      "green light": 0.6954,
+      "red light": 0.7306,
+      "yellow light": 0.5483
+    },
+    "minutes": 8.8,
+    "llm_seconds": 32.6,
+    "run_name": "llm_sonnet_v2_s0_i03",
+    "verdict": "tie",
+    "diagnosis": "The loss/mAP curve shows classic diminishing-return dynamics: val_box loss keeps falling smoothly (1.184->1.106) through epochs 61-100, but mAP50-95 gains in that same window are small and noisy (0.6342->0.6518, with a dip at epoch 73). This means the model is still refining box coordinates numerically, but those refinements aren't translating into IoU-threshold crossings that raise mAP -- i.e. the box loss is not the binding constraint anymore, classification confidence/calibration likely is. The widening train-val gap (loss, not error) with high final precision/recall (0.9485/0.936) suggests the model is well-calibrated on 'easy' boxes but struggling to disambiguate a residual set of harder cases (consistent with the known green-light weakness), which cls weight has not yet been tuned to address. The iteration-2 regression confirms mosaic=1.0 is important for this small dataset -- reducing augmentation diversity hurt rather than helped, so that direction should not be pursued further.",
+    "hypothesis": "Since box=9.0 already captured the localization gains available from that lever (iteration 1 vs 0), and the late-training curve shows loss reduction no longer converts to mAP, the next lever to try is classification loss weight. Increasing cls from 0.5 toward 0.8 will push the model to sharpen class-confidence boundaries, which should specifically help the chronically underperforming green-light class (likely confused with background/other lights) without touching the localization behavior that box=9.0 already fixed. This is an untested parameter direction, so it should give clean, attributable signal.",
+    "changes": [
+      {
+        "param": "cls",
+        "from": 0.5,
+        "to": 0.8,
+        "reason": "Loss curves show the model has largely solved the localization problem (box loss keeps improving with box=9.0) but mAP plateaus, implying the remaining error is classification-driven -- consistent with the known green-light AP deficit. Raising cls weight should sharpen decision boundaries between classes without reintroducing the mosaic regression seen in iteration 2."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 4,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.05,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.5,
+      "mosaic": 1.0
+    },
+    "map50": 0.9499,
+    "map5095": 0.6538,
+    "per_class": {
+      "green light": 0.6912,
+      "red light": 0.7156,
+      "yellow light": 0.5546
+    },
+    "minutes": 8.98,
+    "llm_seconds": 33.4,
+    "run_name": "llm_sonnet_v2_s0_i04",
+    "verdict": "regressed",
+    "diagnosis": "The lr schedule (lrf=0.01) drives the learning rate down to ~7e-5 by epoch 97, essentially freezing the optimizer in the last ~20 epochs. Yet mAP50-95 was still climbing meaningfully in that window (0.6489->0.6594, +0.0105 in the final 22% of epochs), meaning the model had not actually converged -- it was starved of effective learning rate, not stuck in a bad basin. The widening train/val loss gap without rising val loss confirms this isn't overfitting; it's a sign that box-loss reduction late in training barely moves detection quality because gradients are already tiny. Separately, iteration 3 (cls=0.8) shows raising classification loss weight did not fix the green-light weakness -- green-light AP actually dropped versus the best config (0.6954 vs 0.7151), so cls emphasis is not the lever for that problem; it's more likely a visual/appearance confusion (glare, saturation, background greenery) rather than a decision-boundary sharpness issue.",
+    "hypothesis": "Two independent, previously-untested levers: (1) Increasing lrf so the cosine decay bottoms out at a higher final learning rate should preserve more effective gradient signal through epochs 80-100, letting the model continue the box-loss-driven mAP gains that were still occurring at epoch 100 instead of stalling near-zero lr. (2) Increasing hsv_v (value/brightness jitter) should improve robustness to the lighting/glare variation that plausibly explains green light's persistent underperformance despite having the most training samples -- exposing the model to more brightness diversity should reduce green-light misses caused by exposure differences, without touching cls or box weighting that were already explored.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.05,
+        "reason": "mAP was still rising at epoch 100 while lr had decayed to near-zero (7e-5); raising the final lr fraction keeps meaningful gradient updates available in the last third of training instead of freezing optimization prematurely."
+      },
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.5,
+        "reason": "Green light AP is the chronic weak point and cls-weight tuning (iter 3) didn't help or even hurt it, suggesting the issue is visual (brightness/glare) rather than decision-boundary sharpness; more value-augmentation diversity targets this directly and is an untested direction."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 5,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.001,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9524,
+    "map5095": 0.6589,
+    "per_class": {
+      "green light": 0.696,
+      "red light": 0.7164,
+      "yellow light": 0.5644
+    },
+    "minutes": 8.61,
+    "llm_seconds": 35.5,
+    "run_name": "llm_sonnet_v2_s0_i05",
+    "verdict": "tie",
+    "diagnosis": "Iteration 4 confounded two changes (lrf 0.01->0.05 and hsv_v 0.4->0.5) and both moved against the best config, producing a net regression (0.6538 vs 0.6642). The training curve shows why: the box loss (train and val) was still decreasing at epoch 100, and mAP50-95 rose steadily through epoch 83 (0.6542) but then *declined* to 0.6478 by epoch 100 despite lr being near its floor (0.000085). That non-monotonic late-stage behavior indicates the higher lrf kept the effective learning rate too large in the final third of training, injecting noise into the fine-grained localization refinement stage instead of letting it settle -- the opposite of what the hypothesis predicted. Separately, hsv_v=0.5 did not help green light (0.6912, still below iteration 1's 0.7151), suggesting brightness jitter is not the limiting factor for that class -- the confusion is likely more about class boundary sharpness or box precision than lighting robustness. The widening train-val gap without rising val loss confirms the model is still absorbing signal, just inefficiently in this configuration; capacity/regularization tuning rather than LR-schedule loosening looks like the more promising untested lever.",
+    "hypothesis": "Reverting to the iteration-1 config (lrf=0.01, hsv_v=0.4) and instead increasing weight_decay should improve generalization: with train_box loss dropping faster than val_box loss late in training (widening gap), stronger L2 regularization can slow the model's tendency to fit training-set-specific box coordinates/features, letting validation-side localization and classification quality catch up. This is an untested parameter and directly targets the observed train/val divergence without touching the LR schedule or augmentation levers that have already shown regressions in this direction.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.001,
+        "reason": "Untested parameter; directly addresses the widening train-val loss gap seen in the latest run by adding regularization pressure, which should improve generalization on the small validation set without altering the LR schedule or augmentation strategy already tested."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 6,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.03,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9608,
+    "map5095": 0.6566,
+    "per_class": {
+      "green light": 0.7111,
+      "red light": 0.7414,
+      "yellow light": 0.5173
+    },
+    "minutes": 8.55,
+    "llm_seconds": 36.3,
+    "run_name": "llm_sonnet_v2_s0_i06",
+    "verdict": "tie",
+    "diagnosis": "The mAP50-95 curve for this run (and similarly for iteration 1's box=9.0 setup) was still rising sharply at epoch 100, with the biggest jumps concentrated in the final ~10-15 epochs (0.6436->0.6497->0.6575), right where Ultralytics disables mosaic augmentation. This, combined with train_box falling faster than val_box while val loss stays flat, indicates the model isn't overfitting -- it's under-converged relative to its true capability, and mosaic's continuous geometric/context distortion is masking that capability until it's switched off near the end. By that point the cosine LR schedule has already decayed to near-zero (0.000028 at epoch 100), so the model gets very little effective gradient signal exactly when the 'real' (non-mosaic) images become available to learn from cleanly. This suggests the LR schedule is starving the most informative training phase.",
+    "hypothesis": "Raising lrf so the cosine decay bottoms out at a higher final learning rate will preserve more effective gradient magnitude during the last ~10 epochs (post mosaic-close), letting the model actually exploit the cleaner, undistorted images it sees at that stage instead of being frozen near lr=0. This should convert more of the already-observed late-training mAP momentum into gains realized within the fixed 100-epoch budget, likely benefiting yellow/green classes whose box quality was still improving late (per iteration 1's per-class deltas). This is a cleaner, isolated test than iteration 4, which confounded lrf with an hsv_v increase that itself regressed.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.03,
+        "reason": "A higher final LR fraction keeps more gradient signal alive during the critical final epochs (post mosaic-close) where the model demonstrably still has learning capacity, without repeating iteration 4's confound of also raising hsv_v."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 7,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 10.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.971,
+    "map5095": 0.6546,
+    "per_class": {
+      "green light": 0.708,
+      "red light": 0.7229,
+      "yellow light": 0.5329
+    },
+    "minutes": 8.53,
+    "llm_seconds": 37.5,
+    "run_name": "llm_sonnet_v2_s0_i07",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 6's curve shows val_box loss still falling and mAP50-95 still climbing at epoch 100 (0.6462->0.6523 in the last 3 epochs), with lr already decayed to ~0.00006 by then. The train/val gap widening is not overfitting (val loss isn't rising) -- it's simply the train loss saturating faster than val loss can follow, which is normal given a shrinking effective lr near the end of the cosine schedule. Raising lrf to 0.03 (iter 6) to preserve more late-training lr did not help (0.6566 vs 0.6642 best) -- it likely destabilized the mid-training convergence trajectory rather than accelerating the tail. This tells us the bottleneck isn't 'too little late-training signal' but rather that the model needs more effective full-strength training time earlier, and that box=9.0 remains the single lever that produced a real (>0.005) gain so far. All other tested directions (mosaic down, cls up, hsv_v up, weight_decay up, lrf up) have been ties or regressions and should not be repeated.",
+    "hypothesis": "Two levers follow directly from the diagnosis: (1) box=9.0 already gave the largest verified gain (7.5->9.0: +0.02), and the training curve shows box loss and mAP were still improving through epoch 100 without plateauing, so pushing box further to 10.0 should extract additional localization gains still available within the fixed budget. (2) warmup_epochs is untested and defaults to 3.0 (12% of the 100-epoch budget spent ramping lr from near-zero); shortening it to 1.5 epochs gives the model more effective epochs at full learning rate, which should help convergence complete further before the cosine decay drives lr too low to make progress in the final third of training -- directly addressing the observed 'still improving but running out of budget' pattern.",
+    "changes": [
+      {
+        "param": "box",
+        "from": 9.0,
+        "to": 10.0,
+        "reason": "Extends the one lever that has produced a confirmed >2-sigma improvement (7.5->9.0), testing whether the localization-focused gradient emphasis continues to pay off at the upper edge of the allowed range, consistent with the still-decreasing val_box loss at epoch 100."
+      },
+      {
+        "param": "warmup_epochs",
+        "from": 3.0,
+        "to": 1.5,
+        "reason": "Untested parameter; reducing warmup time increases the number of epochs spent at effective (non-ramping) learning rate within the fixed 100-epoch budget, which should help the model converge further before the cosine decay reduces lr to near-zero in the last 15-20 epochs, addressing the 'still improving but budget-limited' dynamic seen in the training curve."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 8,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.95,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9577,
+    "map5095": 0.6518,
+    "per_class": {
+      "green light": 0.6996,
+      "red light": 0.7227,
+      "yellow light": 0.5332
+    },
+    "minutes": 8.52,
+    "llm_seconds": 37.8,
+    "run_name": "llm_sonnet_v2_s0_i08",
+    "verdict": "regressed",
+    "diagnosis": "The loss-vs-mAP curve shows train_box loss falling steadily (2.056->0.974) while val_box loss plateaus in the last third (1.294->1.218, epochs 73-100) and mAP50-95 stalls after epoch ~69 despite lr still nonzero. This is not classic overfitting (val loss isn't rising) but a sign that the optimizer is exploiting fine-grained training-set gradient directions that don't generalize -- i.e. the update trajectory is getting noisy/overfit to per-batch specifics rather than finding broadly better minima. Iteration 7's attempt to shorten warmup (1.5) to buy more full-LR epochs, combined with pushing box to 10, made this worse (regressed to 0.6546), suggesting the model needs *more* stable early optimization, not less, and that box weight is already saturated at 9.0 (pushing to 10 hurt). This points toward the optimizer's momentum/update stability as an unexplored lever rather than further loss-weight or schedule-length changes in directions already shown to regress.",
+    "hypothesis": "Increasing AdamW momentum (beta1) from 0.9 toward 0.95 should smooth the gradient estimate used for updates, reducing the batch-to-batch noise that a small dataset (509 images, 32 steps/epoch) injects into the optimization trajectory. This should let the late-training loss decrease actually translate into mAP gains instead of stalling, without touching the already-tuned box/schedule parameters that are near their local optimum (box=9 confirmed best, box=10 and warmup=1.5 both regressed).",
+    "changes": [
+      {
+        "param": "momentum",
+        "from": 0.9,
+        "to": 0.95,
+        "reason": "Untested parameter; higher momentum smooths gradient updates against small-dataset noise, which should help convert the still-decreasing train/val box loss into actual mAP gains in the late-training stagnation phase observed in iteration 7's diagnostics, without repeating the failed box=10/warmup=1.5 direction."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 9,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.0009,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9364,
+    "map5095": 0.6468,
+    "per_class": {
+      "green light": 0.6913,
+      "red light": 0.7244,
+      "yellow light": 0.5248
+    },
+    "minutes": 8.5,
+    "llm_seconds": 39.9,
+    "run_name": "llm_sonnet_v2_s0_i09",
+    "verdict": "regressed",
+    "diagnosis": "The mAP50-95 curve is highly non-monotonic (0.59 at ep37, drops to 0.565 at ep49, back to 0.606 at ep61, dips to 0.597 at ep73, then climbs to a peak of 0.6512 at ep90 before falling to 0.6422 at ep100), despite val_box loss decreasing smoothly and monotonically throughout. This mismatch means the loss landscape is fine but the optimizer's step-to-step trajectory is noisy relative to the metric -- consistent with a small-batch (32 steps/epoch), small-dataset regime where lr0 is aggressive enough to cause oscillation in the actual weight trajectory even while the smoothed loss keeps falling. The fact that increasing momentum (iter8, beta1 0.95) made things worse, rather than smoothing the trajectory as hypothesized, suggests the noise isn't just gradient variance that averaging fixes -- it's step-size driven overshoot, which more momentum actually amplifies (compounding overshoot in the same direction). Also notable: performance peaks at epoch 90 and degrades over the final 10 epochs, which is exactly when mosaic closes (a fixed frozen behavior) -- the model may be mildly destabilized by the abrupt training-distribution shift when mosaic turns off combined with still-nontrivial lr. Since box=9.0 already captured the localization gain available, and every other tested lever (cls, lrf, weight_decay, momentum, warmup, hsv_v, mosaic) has regressed or tied, lr0 itself -- the single most fundamental optimization parameter -- has never been tested despite being a plausible source of the observed oscillation.",
+    "hypothesis": "Reducing lr0 should shrink the effective step size throughout training, damping the oscillatory mAP behavior seen in the training curve (large swings between epochs 37-73) without changing the loss trajectory's overall downward shape. A smaller, steadier step size should let the model settle more consistently into a good minimum by epoch 100 instead of peaking mid-training (ep90) and degrading afterward, converting more of the already-available loss reduction into stable mAP gains -- directly targeting the noise-driven instability that momentum increase failed to fix (and likely worsened by amplifying overshoot).",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.001429,
+        "to": 0.0009,
+        "reason": "lr0 is untested in the search so far; the oscillatory mAP curve despite smooth loss decrease suggests overshoot in the optimization trajectory. A ~35% reduction in base learning rate should dampen this without drastically slowing convergence, since 100 epochs plus the existing cosine decay already provide ample budget."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 10,
+    "backend": "sonnet",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.5,
+      "mosaic": 1.0
+    },
+    "map50": 0.9474,
+    "map5095": 0.656,
+    "per_class": {
+      "green light": 0.7066,
+      "red light": 0.7208,
+      "yellow light": 0.5405
+    },
+    "minutes": 8.52,
+    "llm_seconds": 57.1,
+    "run_name": "llm_sonnet_v2_s0_i10",
+    "verdict": "regressed",
+    "diagnosis": "The latest run (iter9, lr0=0.0009) shows mAP50-95 still rising at epoch 100 (0.6439->0.6488) and val_box still falling (1.089->1.083), so the model had not converged and lowering lr0 mainly slowed progress without fixing anything -- it just gave a worse endpoint within the fixed 100-epoch budget, confirming default lr0=0.001429 is better. Across iterations 4-9, every optimizer/schedule lever (lrf up, momentum up, lr0 down, warmup down, weight_decay up) has produced only ties or regressions relative to the iter1 best, meaning we've likely exhausted the easy gains from the optimization dynamics axis. The one clearly real, attributable gain remains box=9.0 (iter0->iter1, +0.02). Meanwhile the dataset's known weakness -- green light AP lagging red/yellow despite most samples -- has never been cleanly isolated: iteration 4 raised hsv_v to 0.5 but confounded it with lrf=0.05, and that combination regressed, so we don't actually know hsv_v's isolated effect. Given green-light underperformance is plausibly driven by lighting/exposure variability (glare, dusk/backlighting) rather than by classification-loss weighting (cls=0.8 barely moved green light AP), an isolated brightness-augmentation test is the most informative untried direction left in the search space.",
+    "hypothesis": "Increasing hsv_v (value/brightness jitter) in isolation, on top of the proven box=9.0 config, should improve robustness to the lighting/exposure variation that plausibly explains green light's persistent underperformance, without reintroducing the lrf change that confounded the only prior test of this parameter (iter4). If the mechanism is correct, we expect green-light AP to rise meaningfully while red/yellow stay roughly flat, since only exposure-related confusion should be affected, and mAP50-95 to move beyond the 0.0026 noise band without disrupting the already-tuned localization behavior from box=9.0.",
+    "changes": [
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.5,
+        "reason": "Isolate the brightness-augmentation lever (previously only tested combined with lrf=0.05, which regressed) to directly test its effect on the known green-light weakness attributed to lighting/exposure variability, keeping all other proven-good parameters (box=9.0, lrf=0.01, lr0 default) unchanged for clean attribution."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  }
+]

@@ -1,0 +1,53 @@
+{
+  "source": "Opus 5 v2, iteration 7",
+  "hyp": {
+    "lr0": 0.001429,
+    "lrf": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0005,
+    "warmup_epochs": 3.0,
+    "box": 9.0,
+    "cls": 0.3,
+    "hsv_v": 0.6,
+    "mosaic": 0.5
+  },
+  "results": [
+    {
+      "seed": 0,
+      "map50": 0.9629,
+      "map5095": 0.6766,
+      "per_class": {
+        "green light": 0.7027,
+        "red light": 0.7452,
+        "yellow light": 0.5818
+      },
+      "minutes": 8.49
+    },
+    {
+      "seed": 1,
+      "map50": 0.9672,
+      "map5095": 0.6727,
+      "per_class": {
+        "green light": 0.699,
+        "red light": 0.7354,
+        "yellow light": 0.5837
+      },
+      "minutes": 8.54
+    },
+    {
+      "seed": 2,
+      "map50": 0.954,
+      "map5095": 0.6556,
+      "per_class": {
+        "green light": 0.7039,
+        "red light": 0.7289,
+        "yellow light": 0.5339
+      },
+      "minutes": 8.55
+    }
+  ],
+  "mean_map5095": 0.6683,
+  "std_map5095": 0.0091,
+  "baseline_mean": 0.6463,
+  "baseline_std": 0.004
+}

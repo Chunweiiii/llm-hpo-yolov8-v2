@@ -1,0 +1,470 @@
+[
+  {
+    "iteration": 0,
+    "backend": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9572,
+    "map5095": 0.6441,
+    "per_class": {
+      "green light": 0.7038,
+      "red light": 0.7273,
+      "yellow light": 0.5011
+    },
+    "minutes": 8.42,
+    "run_name": "llm_qwen_v2_s0_i00",
+    "verdict": "baseline",
+    "diagnosis": "",
+    "hypothesis": "",
+    "changes": [],
+    "base_iteration": null,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 1,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.002,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.001,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9472,
+    "map5095": 0.6533,
+    "per_class": {
+      "green light": 0.6897,
+      "red light": 0.72,
+      "yellow light": 0.5502
+    },
+    "minutes": 8.4,
+    "llm_seconds": 11.5,
+    "run_name": "llm_qwen_v2_s0_i01",
+    "verdict": "improved",
+    "diagnosis": "The training dynamics suggest that the model is underfitting the validation set, as the validation loss is not rising despite the training loss falling. This indicates that the model may be too simple or the learning rate is too high, causing it to overshoot the optimal solution.",
+    "hypothesis": "Increasing the learning rate (lr0) and the weight decay (weight_decay) may help the model converge to a better solution without overshooting.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.001429,
+        "to": 0.002,
+        "reason": "A higher learning rate may allow the model to learn more quickly and potentially escape local minima."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.001,
+        "reason": "Increasing weight decay may help prevent overfitting by penalizing large weights, which could improve generalization."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 2,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.003,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.001,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9666,
+    "map5095": 0.6564,
+    "per_class": {
+      "green light": 0.6983,
+      "red light": 0.7194,
+      "yellow light": 0.5514
+    },
+    "minutes": 8.42,
+    "llm_seconds": 10.3,
+    "run_name": "llm_qwen_v2_s0_i02",
+    "verdict": "tie",
+    "diagnosis": "The training dynamics suggest that the model is underfitting, as the validation loss is not rising despite the training loss falling. This indicates that the model may not be capturing the complexity of the data adequately.",
+    "hypothesis": "Increasing the learning rate (lr0) may help the model converge faster and potentially capture the complexity of the data better.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.002,
+        "to": 0.003,
+        "reason": "The model is underfitting, and a higher learning rate may help it learn more effectively from the data."
+      }
+    ],
+    "base_iteration": 1,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 3,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.002,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0015,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9532,
+    "map5095": 0.6403,
+    "per_class": {
+      "green light": 0.6784,
+      "red light": 0.7158,
+      "yellow light": 0.5269
+    },
+    "minutes": 8.61,
+    "llm_seconds": 11.9,
+    "run_name": "llm_qwen_v2_s0_i03",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics suggest that the model is converging too quickly, as indicated by the widening train/val loss gap. This could be due to the learning rate being too high or the weight decay being too low, which might be causing the model to overshoot the optimal solution.",
+    "hypothesis": "Reducing the learning rate (lr0) and increasing the weight decay (weight_decay) may help the model converge more smoothly and avoid overshooting the optimal solution.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.002,
+        "reason": "A lower learning rate will allow the model to take smaller steps during training, potentially leading to a more stable convergence."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0015,
+        "reason": "Increasing the weight decay will help regularize the model, preventing it from overfitting to the training data and potentially improving generalization."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 4,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.003,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0012,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9659,
+    "map5095": 0.6546,
+    "per_class": {
+      "green light": 0.6953,
+      "red light": 0.7119,
+      "yellow light": 0.5567
+    },
+    "minutes": 9.26,
+    "llm_seconds": 11.1,
+    "run_name": "llm_qwen_v2_s0_i04",
+    "verdict": "tie",
+    "diagnosis": "The training dynamics indicate that the model is not effectively translating optimization into detection performance. The train/val loss gap widens, suggesting that the model is underfitting the validation data. This could be due to insufficient regularization or an imbalance in the training data.",
+    "hypothesis": "Increasing the weight decay (weight_decay) may help the model regularize better and avoid underfitting.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0012,
+        "reason": "The current weight decay is too low, leading to underfitting. Increasing it will help the model generalize better."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 5,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.002,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0015,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9532,
+    "map5095": 0.6403,
+    "per_class": {
+      "green light": 0.6784,
+      "red light": 0.7158,
+      "yellow light": 0.5269
+    },
+    "minutes": 9.47,
+    "llm_seconds": 12.9,
+    "run_name": "llm_qwen_v2_s0_i05",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics suggest that the model is converging too quickly, as indicated by the widening train-val loss gap. This could be due to the learning rate being too high or the weight decay being too low, which might be causing the model to overshoot the optimal solution.",
+    "hypothesis": "Reducing the learning rate (lr0) and increasing the weight decay (weight_decay) may help the model converge more smoothly and avoid overshooting the optimal solution.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.002,
+        "reason": "The model is converging too quickly, and reducing the learning rate will allow it to take smaller steps and potentially find a better solution."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0015,
+        "reason": "The model might be underfitting due to insufficient regularization. Increasing the weight decay will help regularize the model and prevent it from underfitting."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": 3,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 6,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.003,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0018,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9694,
+    "map5095": 0.6467,
+    "per_class": {
+      "green light": 0.6917,
+      "red light": 0.6987,
+      "yellow light": 0.5497
+    },
+    "minutes": 9.12,
+    "llm_seconds": 11.7,
+    "run_name": "llm_qwen_v2_s0_i06",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics indicate that the model is not effectively translating optimization into detection performance. The train/val loss gap widens, suggesting that the model is underfitting the validation data. This could be due to insufficient regularization or an imbalance in the training data.",
+    "hypothesis": "Increasing the weight decay (weight_decay) may help the model regularize better and avoid underfitting.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0018,
+        "reason": "The current weight decay is too low, leading to underfitting. Increasing it will help the model generalize better to the validation data."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 7,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.004,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.001,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.972,
+    "map5095": 0.6402,
+    "per_class": {
+      "green light": 0.6764,
+      "red light": 0.7178,
+      "yellow light": 0.5262
+    },
+    "minutes": 9.24,
+    "llm_seconds": 11.4,
+    "run_name": "llm_qwen_v2_s0_i07",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics show that the model is underfitting, as the validation loss is not rising despite the training loss falling. This suggests that the model is not capturing the complexity of the data well enough.",
+    "hypothesis": "Increasing the learning rate (lr0) may help the model converge faster and potentially capture the complexity of the data better.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.004,
+        "reason": "The model is underfitting, and increasing the learning rate may help it converge faster and capture the complexity of the data better."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 8,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.002,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0015,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9532,
+    "map5095": 0.6403,
+    "per_class": {
+      "green light": 0.6784,
+      "red light": 0.7158,
+      "yellow light": 0.5269
+    },
+    "minutes": 8.69,
+    "llm_seconds": 12.8,
+    "run_name": "llm_qwen_v2_s0_i08",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics suggest that the model is converging too quickly, as indicated by the widening train-val loss gap. This could be due to the learning rate being too high or the weight decay being too low, which might be causing the model to overshoot the optimal solution.",
+    "hypothesis": "Reducing the learning rate (lr0) and increasing the weight decay (weight_decay) may help the model converge more smoothly and avoid overshooting the optimal solution.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.002,
+        "reason": "The model is converging too quickly, and reducing the learning rate may help it converge more smoothly."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0015,
+        "reason": "The model might be underfitting, and increasing the weight decay may help it regularize better and avoid underfitting."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": 3,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 9,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.004,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0008,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.966,
+    "map5095": 0.6532,
+    "per_class": {
+      "green light": 0.6954,
+      "red light": 0.7048,
+      "yellow light": 0.5595
+    },
+    "minutes": 8.54,
+    "llm_seconds": 13.3,
+    "run_name": "llm_qwen_v2_s0_i09",
+    "verdict": "tie",
+    "diagnosis": "The training dynamics indicate that the model is not translating optimization into improved detection performance. The train/val loss gap is widening, suggesting that the model is underfitting. The learning rate (lr0) and weight decay (weight_decay) are already at values that have shown some improvement, but the model is still not performing well. The validation mAP has stagnated despite the decreasing training loss, indicating that the model is not learning effectively.",
+    "hypothesis": "Increasing the learning rate (lr0) may help the model converge faster and potentially capture the complexity of the data better, while also adjusting the weight decay (weight_decay) to a lower value may help the model avoid underfitting.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.004,
+        "reason": "The model is not translating optimization into improved detection performance, and increasing the learning rate may help the model converge faster and potentially capture the complexity of the data better."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0008,
+        "reason": "The train/val loss gap is widening, suggesting that the model is underfitting. Adjusting the weight decay to a lower value may help the model avoid underfitting."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 10,
+    "backend": "qwen",
+    "hyp": {
+      "lr0": 0.002,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0015,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9532,
+    "map5095": 0.6403,
+    "per_class": {
+      "green light": 0.6784,
+      "red light": 0.7158,
+      "yellow light": 0.5269
+    },
+    "minutes": 8.46,
+    "llm_seconds": 11.9,
+    "run_name": "llm_qwen_v2_s0_i10",
+    "verdict": "regressed",
+    "diagnosis": "The training dynamics suggest that the model is converging too quickly, as indicated by the widening train-val loss gap. This could be due to the learning rate being too high or the weight decay being too low, which might be causing the model to overshoot the optimal solution.",
+    "hypothesis": "Reducing the learning rate (lr0) and increasing the weight decay (weight_decay) may help the model converge more smoothly and avoid overshooting the optimal solution.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.003,
+        "to": 0.002,
+        "reason": "The model is converging too quickly, and reducing the learning rate may help it converge more smoothly."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.001,
+        "to": 0.0015,
+        "reason": "The model might be underfitting, and increasing the weight decay may help it regularize better and avoid underfitting."
+      }
+    ],
+    "base_iteration": 2,
+    "duplicate_of": 3,
+    "notes": [],
+    "parse_error": null
+  }
+]

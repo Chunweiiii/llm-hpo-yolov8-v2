@@ -1,0 +1,24 @@
+{
+  "dataset": "traffic_light_v2 (937 images, filtered+merged)",
+  "results": [
+    {
+      "seed": 0,
+      "map50": 0.9572,
+      "map5095": 0.6441
+    },
+    {
+      "seed": 1,
+      "map50": 0.963,
+      "map5095": 0.6429
+    },
+    {
+      "seed": 2,
+      "map50": 0.9593,
+      "map5095": 0.652
+    }
+  ],
+  "mean_map5095": 0.6463,
+  "std_map5095": 0.004,
+  "mean_map50": 0.9598,
+  "std_map50": 0.0024
+}

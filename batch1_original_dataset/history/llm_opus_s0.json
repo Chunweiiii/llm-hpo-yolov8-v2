@@ -1,0 +1,488 @@
+[
+  {
+    "iteration": 0,
+    "backend": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.94,
+    "map5095": 0.6995,
+    "per_class": {
+      "green light": 0.6907,
+      "red light": 0.7392,
+      "yellow light": 0.6687
+    },
+    "minutes": 7.22,
+    "run_name": "llm_opus_s0_i00",
+    "verdict": "baseline",
+    "diagnosis": "",
+    "hypothesis": "",
+    "changes": [],
+    "base_iteration": null,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 1,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 9.0,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 0.8
+    },
+    "map50": 0.9388,
+    "map5095": 0.6902,
+    "per_class": {
+      "green light": 0.6906,
+      "red light": 0.7162,
+      "yellow light": 0.6637
+    },
+    "minutes": 6.9,
+    "llm_seconds": 20.9,
+    "run_name": "llm_opus_s0_i01",
+    "verdict": "regressed",
+    "diagnosis": "The gap between mAP50 (0.94) and mAP50-95 (0.6995) is the dominant signal: the detector finds and classifies traffic lights well, but box quality at high IoU thresholds is the bottleneck. Precision 0.965 vs recall 0.887 confirms the model is conservative — it misses boxes rather than producing false positives, and the missed/loosely-fit instances are most likely small, low-contrast lights (which also explains why 'green light' lags despite having the most samples: green heads are often dimmer/smaller and easily confused with background at tight IoU). The training dynamics show val_box loss plateauing near 0.83-0.86 while train_box keeps falling to 0.59 — the regression head keeps sharpening on the training distribution without transferring, and mAP moves only ~0.02 over the last half of the budget. Since val loss is not rising, this is not classic overfitting; rather, the training distribution seen by the model (near-constant mosaic at p=1.0, which shrinks objects and crops context) differs from the clean full-resolution validation images, so the extra optimization is spent on a slightly wrong task. The current loss balance also under-weights localization relative to what a high-IoU metric requires.",
+    "hypothesis": "Increasing the box regression weight and reducing the mosaic probability should raise mAP50-95 without hurting mAP50. A larger 'box' term directs more gradient into IoU/DFL refinement, which is exactly what the 0.94 -> 0.70 mAP50-to-mAP50-95 drop says is missing. Lowering mosaic to 0.8 means ~20% of batches are single, full-scale images that match validation geometry, giving the regression head clean large-object targets and improving recall on small green lights whose spatial detail mosaic downscaling destroys. Together they should convert the late-stage loss decrease into actual detection gains instead of the current stagnation.",
+    "changes": [
+      {
+        "param": "box",
+        "from": 7.5,
+        "to": 9.0,
+        "reason": "mAP50 is already 0.94 while mAP50-95 is 0.70, so localization tightness, not detection or classification, limits the objective; a heavier box/DFL weight allocates more capacity to high-IoU refinement."
+      },
+      {
+        "param": "mosaic",
+        "from": 1.0,
+        "to": 0.8,
+        "reason": "Always-on mosaic shrinks and crops these already-small objects, creating a train/val distribution mismatch that shows up as a flat val_box loss while train_box keeps dropping; occasional un-mosaiced images restore validation-like scale and should lift recall (0.8865) and green-light AP."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 2,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0012,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.55,
+      "mosaic": 1.0
+    },
+    "map50": 0.9406,
+    "map5095": 0.698,
+    "per_class": {
+      "green light": 0.6782,
+      "red light": 0.7327,
+      "yellow light": 0.6831
+    },
+    "minutes": 6.82,
+    "llm_seconds": 17.4,
+    "run_name": "llm_opus_s0_i02",
+    "verdict": "tie",
+    "diagnosis": "The run plateaus in localization quality, not in classification: mAP50 stays at ~0.94 while mAP50-95 sits near 0.69, and precision (0.972) far exceeds recall (0.916). Raising box to 9.0 did not help — val_box loss barely moved (1.05-1.02 late) even though train_box fell from 1.32 to 0.72, so extra IoU/DFL gradient is being spent memorizing the 509 training images rather than sharpening boxes on unseen ones. The widening train/val gap with flat val loss is the signature of a capacity/regularization mismatch in a low-data regime: the network fits the training distribution's easy modes and stops generalizing after ~epoch 42, so 57% of the schedule is wasted. Also notable is that the final score (0.6683) is well below the best (0.6902 at epoch 77) — the tail of the cosine schedule is actively degrading the model, which suggests the effective late-stage learning rate is still large enough to drift the weights while gradients are dominated by already-fit training samples. Since box was shown to be the wrong lever and mosaic 0.8 removed useful diversity, the productive direction is regularization/augmentation strength and schedule shape, both untested so far.",
+    "hypothesis": "Two untested levers should attack the generalization stall directly. (1) Increasing weight_decay from 0.0005 to 0.0012 adds explicit L2 pressure that counteracts the train-loss-only descent after epoch 42; with only 509 images and a 3.2M-parameter backbone, stronger decay should keep features broader and translate late-stage optimization into val gains instead of train-set memorization. (2) Raising hsv_v from 0.4 to 0.55 targets the known green-light weakness specifically: green lamps are the class most affected by exposure/bloom variation (bright saturated emitters against dark housings), and stronger value jitter forces the classifier and the regression head to rely on lamp geometry and position within the housing rather than absolute brightness, which should both improve green AP and tighten box edges at high IoU thresholds. Together these should raise recall (currently the limiting factor at 0.916) without sacrificing the already-high precision, and should also flatten the late-epoch degradation seen between epoch 77 and 100.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0012,
+        "reason": "Train loss keeps falling while val loss is flat and mAP stagnates from epoch 42 onward — a regularization deficit, not overfitting in the val-loss sense. Stronger decay should redirect late-stage capacity toward generalizable features and reduce the best-to-final drop."
+      },
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.55,
+        "reason": "Untested parameter that is photometrically safe (unlike hue) and directly addresses the green-light weakness: brightness jitter removes the shortcut of absolute lamp luminance, forcing shape/position cues and improving high-IoU localization and recall."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 3,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.005,
+      "momentum": 0.94,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9312,
+    "map5095": 0.6969,
+    "per_class": {
+      "green light": 0.6815,
+      "red light": 0.7328,
+      "yellow light": 0.6765
+    },
+    "minutes": 6.93,
+    "llm_seconds": 33.8,
+    "run_name": "llm_opus_s0_i03",
+    "verdict": "tie",
+    "diagnosis": "The run is not overfitting and is not capacity-limited: val_box loss is still falling at epoch 100 (0.849) and mAP50-95 makes its largest jumps in the final ~15 epochs, exactly when the LR drops below ~2e-4. That means the model spends most of the budget at a learning rate that is too high for the fine, high-IoU box refinement this metric rewards, and only starts converting optimization into detection quality once the schedule has almost run out. The widening train/val gap with flat val loss is a symptom of noisy, large-step updates on a 509-image dataset (batch 16 -> very noisy gradient estimates), not memorization. Precision 0.968 vs recall 0.906 confirms the head is confident but misses/loosely localizes boxes, and mAP50 0.94 vs mAP50-95 0.70 confirms the deficit is localization precision, not classification. Both prior perturbations (box+mosaic, wd+hsv_v) were loss-weight/augmentation edits and did nothing, which points away from the loss balance and toward the optimizer schedule as the untouched bottleneck.",
+    "hypothesis": "Reshaping the LR schedule to spend far more of the 100 epochs in the low-LR regime, and smoothing the gradient estimate, should convert the still-descending val loss into real mAP50-95 gains. Lowering lrf from 0.01 to 0.005 makes the decay curve reach small learning rates substantially earlier, extending the refinement phase that the curve shows is the only phase producing mAP gains, instead of cramming it into the last 15 epochs. Raising momentum (AdamW beta1) from 0.9 to 0.94 averages over roughly twice as many mini-batches, which with batch 16 on 509 images materially reduces update variance; less jitter in the DFL/IoU regression head means tighter box edges at IoU 0.7-0.95, precisely where the 0.94 -> 0.70 gap lives, and should lift recall on the small, low-contrast green lights whose gradient signal is currently drowned in batch noise. Both parameters are untested, so the outcome is informative regardless of direction.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.005,
+        "reason": "mAP50-95 only improves once LR falls below ~2e-4; a faster-decaying schedule reaches that productive low-LR refinement regime tens of epochs earlier, giving the box head far more time to converge at high IoU instead of gaining 0.02 mAP in the last 15 epochs."
+      },
+      {
+        "param": "momentum",
+        "from": 0.9,
+        "to": 0.94,
+        "reason": "With batch 16 on 509 images the gradient estimate is very noisy; a longer beta1 average stabilizes updates, which should tighten localization (the actual deficit, given mAP50 0.94 vs mAP50-95 0.70) and improve recall without the precision cost."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 4,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9336,
+    "map5095": 0.7121,
+    "per_class": {
+      "green light": 0.6662,
+      "red light": 0.7459,
+      "yellow light": 0.7244
+    },
+    "minutes": 6.83,
+    "llm_seconds": 26.0,
+    "run_name": "llm_opus_s0_i04",
+    "verdict": "improved",
+    "diagnosis": "The run is not overfitting in the classical sense: val_box loss keeps falling (1.30 -> 0.86) and never turns up, yet mAP50-95 sits on a plateau from epoch ~66 onward and even oscillates by 0.01-0.02 between epochs 85-100. The 0.988 precision / 0.8625 recall split is the real story: the model emits very few but very confident boxes, so the missing mAP is coming from objects that are never proposed above threshold at all, plus low-confidence true positives that get ranked poorly in the AP integral. That is a classification/objectness confidence problem, not a localization problem — consistent with iteration 1 showing that pushing 'box' up (7.5 -> 9.0) actively hurt (-0.009): the regression head already has enough gradient share, and starving 'cls' relative to it makes borderline lamps (dim/blurred green lights, which is exactly the weak class) fall below the score threshold. Also notable: warmup consumes 3 epochs and the curve only reaches within 0.02 of its best at epoch 66, meaning a third of the schedule is spent grinding out the last 0.02 while the useful mid-LR phase is short. LR-schedule reshaping (iter 3) and regularization/exposure jitter (iter 2) both landed inside noise, so those axes are low-yield; the classification loss weight has never been touched at all.",
+    "hypothesis": "Raising cls from 0.5 to 0.9 rebalances the loss so the classification/objectness branch receives roughly twice the gradient share relative to the (unchanged) box and DFL terms. Because the failure mode is a conservative detector with recall 0.86 against precision 0.99, sharpening class scores should push borderline detections — mainly small, low-contrast green lamps — above the confidence threshold and, just as importantly, rank surviving true positives higher in the precision-recall integral, which is what mAP averaged over IoU 0.5:0.95 actually rewards. Localization quality should not degrade since box stays at its best-known value of 7.5. Simultaneously cutting warmup_epochs from 3.0 to 1.5 returns ~1.5 epochs of productive learning to the schedule and lets the model reach the mid-LR regime sooner; with a COCO-pretrained backbone and only 509 images, a long warmup is mostly wasted budget, and the curve shows the mid-schedule (epochs 25-66) is where nearly all mAP is gained, so lengthening that phase should raise the plateau rather than just reach it earlier.",
+    "changes": [
+      {
+        "param": "cls",
+        "from": 0.5,
+        "to": 0.9,
+        "reason": "Precision 0.988 vs recall 0.8625 means detections are missed/under-scored, not mislocalized; iteration 1 already showed that shifting weight toward box regression regresses mAP. Increasing the classification weight raises confidence on marginal (especially green) lamps so they enter the PR curve at all and rank higher."
+      },
+      {
+        "param": "warmup_epochs",
+        "from": 3.0,
+        "to": 1.5,
+        "reason": "An untested axis. The model needs until epoch 66 to get within 0.02 of its best and then stalls, so the productive mid-LR window is the bottleneck; with a pretrained backbone a 3-epoch warmup is unnecessary insurance and shortening it extends the phase that actually produces mAP gains."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 5,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.0022,
+      "lrf": 0.007,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9386,
+    "map5095": 0.689,
+    "per_class": {
+      "green light": 0.6772,
+      "red light": 0.7337,
+      "yellow light": 0.6562
+    },
+    "minutes": 6.65,
+    "llm_seconds": 38.0,
+    "run_name": "llm_opus_s0_i05",
+    "verdict": "regressed",
+    "diagnosis": "The iteration-4 run is not overfitting and is not converged: val_box loss is still monotonically falling (0.900 at ep73 -> 0.845 at ep97) and mAP50-95 is still climbing at the very end (best at epoch 96, 0.7016 -> 0.7078 over the last 15 epochs, with the last 0.005 only arriving at epoch 96). The widening train/val gap is simply the train loss falling faster in a nearly-zero-LR regime; the model is optimization-limited, not capacity- or regularization-limited. Crucially, the mid-schedule is inefficient: mAP crawls from 0.633 (ep25) to 0.669 (ep49) to 0.681 (ep73) while LR is in the 0.0011-0.0004 band, and then the real refinement gains only appear once LR falls below ~2.4e-4. That pattern says the effective step size in the middle third is too small to make meaningful progress but the budget spent there is large. Precision 0.976 vs recall 0.894 also shows the detector is still conservative; the cls=0.9 change from iteration 4 clearly helped ranking (yellow 0.669 -> 0.724, red 0.739 -> 0.746) even though green dipped, so the loss balance is not the current bottleneck. The single untouched axis across all five runs is lr0 itself — every experiment so far has probed schedule shape, loss weights, augmentation and regularization, but never the base step size. Given the model is still improving when the budget expires, more total optimization progress per epoch is the most plausible remaining lever.",
+    "hypothesis": "Raising lr0 from 0.001429 to 0.0022 (a modest 1.55x) while lowering lrf from 0.01 to 0.007 so the terminal LR stays essentially unchanged (2.2e-3 * 0.007 = 1.54e-5 vs 1.43e-5 today) should lift the entire mid-schedule LR band without shortening or weakening the low-LR refinement phase that is demonstrably producing the mAP gains. Mechanism: with a COCO-pretrained backbone and only 509 images / ~32 steps per epoch, the total number of weight updates is tiny, so progress is step-size limited rather than noise limited; a larger step in epochs 20-70 lets the box/DFL head escape the 0.65-0.68 plateau earlier, so the cosine tail begins refining from a better point instead of spending 26% of the budget crawling the last 0.02. The unchanged terminal LR preserves the fine-grained IoU sharpening that produced the epoch 85-100 gains, and the unchanged cls=0.9 / warmup=1.5 keeps the confirmed iteration-4 improvement intact. Risk is controlled: 0.0022 is well inside the allowed range and only slightly above default, so instability is unlikely; if mAP rises the lr0 axis becomes the next direction to push, and if it ties or regresses we learn the schedule floor, not the peak, is what matters.",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.001429,
+        "to": 0.0022,
+        "reason": "Completely untested axis. The curve shows the model is still improving at epoch 100 and spends epochs 25-73 gaining only ~0.05 mAP; a larger base step gives more effective optimization progress per epoch within the fixed 100-epoch budget, moving the plateau upward rather than merely reaching it sooner."
+      },
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.007,
+        "reason": "Compensates the higher lr0 so the absolute terminal learning rate is held near its current value (1.54e-5 vs 1.43e-5). This isolates the change to the mid-schedule LR band and protects the late low-LR refinement phase, which the curve identifies as the only phase currently converting loss reduction into mAP."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 6,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.4,
+      "mosaic": 0.7
+    },
+    "map50": 0.9322,
+    "map5095": 0.7028,
+    "per_class": {
+      "green light": 0.6696,
+      "red light": 0.7247,
+      "yellow light": 0.7139
+    },
+    "minutes": 6.78,
+    "llm_seconds": 36.7,
+    "run_name": "llm_opus_s0_i06",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 5 confirms the schedule is not step-size limited: raising lr0 to 0.0022 lowered mAP50-95 by 0.023 while mAP50 stayed at ~0.94, i.e. the extra step size only blurred high-IoU localization. More importantly, the recurring signature across every run is the same and is not about the optimizer at all: mAP50 sits at 0.93-0.94 while mAP50-95 sits at 0.69-0.71, precision is 0.98 against recall 0.88, and the train/val loss gap widens (0.042 -> 0.110) purely because train_box keeps falling (0.66 at epoch 100) while val_box plateaus around 0.85-0.86 with no rise. A widening gap with a flat, non-increasing val loss is not overfitting to the data — it is a train/val distribution mismatch. Train loss is computed almost entirely on mosaic composites (mosaic=1.0 in every run so far), where each traffic light is downscaled ~2x and often clipped at tile borders, whereas validation is full-scale single images. The model is therefore getting extremely good at a geometry it is never evaluated on, which explains why late-epoch optimization gains (train_box -0.14 from epoch 73 to 100) buy essentially no mAP, and why the deficit is concentrated at high IoU thresholds rather than in detection existence (mAP50 is already near ceiling). Small green lamps suffer most because they are the ones mosaic downscaling pushes below the useful-detail threshold, matching the known green-light weakness. The only prior mosaic test (iteration 1, mosaic=0.8) was confounded with box=9.0, which is the more likely cause of that regression, so the mosaic axis is effectively untested.",
+    "hypothesis": "Reducing mosaic from 1.0 to 0.7 makes ~30% of training batches native, full-scale images whose object-scale and border statistics match the validation set. This directly attacks the train/val geometry mismatch that is absorbing the late-stage loss decrease: the box/DFL head will receive gradient from targets at the same pixel scale it must regress at inference, which should tighten box edges in the IoU 0.6-0.9 band where the 0.94 -> 0.71 gap lives, and should raise recall on small green lamps that mosaic downscaling currently renders detail-free. Because mosaic remains the dominant mode (0.7) the regularization benefit for a 509-image dataset is largely preserved, so I expect mAP50 to hold near 0.93-0.94 while mAP50-95 gains come from localization quality rather than new detections. Everything else is held at the confirmed iteration-4 optimum (cls=0.9, warmup=1.5, lr0=0.001429, box=7.5) so the mosaic effect is cleanly attributable; the failed lr0=0.0022 and the confounded box=9.0 are both reverted.",
+    "changes": [
+      {
+        "param": "mosaic",
+        "from": 1.0,
+        "to": 0.7,
+        "reason": "The widening train/val loss gap with flat validation loss indicates a train/val input-distribution mismatch, not overfitting. mosaic=1.0 means the regression head almost never sees objects at validation scale; giving it ~30% clean, full-resolution images aligns the target scale distribution and should convert the ongoing loss decrease into high-IoU localization gains, which is exactly where the mAP50-to-mAP50-95 deficit sits. This axis is effectively untested, since the only previous reduction was confounded with box=9.0."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 7,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 1.2,
+      "hsv_v": 0.28,
+      "mosaic": 1.0
+    },
+    "map50": 0.946,
+    "map5095": 0.7049,
+    "per_class": {
+      "green light": 0.6941,
+      "red light": 0.7281,
+      "yellow light": 0.6924
+    },
+    "minutes": 6.76,
+    "llm_seconds": 62.4,
+    "run_name": "llm_opus_s0_i07",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 6 confirms that mosaic reduction is harmful: dropping to 0.7 cost ~0.009 mAP versus iteration 4, and every class fell slightly, so the geometry-mismatch theory is dead — with only 509 images the extra mosaic regularization is worth more than matching val object scale. More informative is the shape of the curve, which is essentially identical across all seven runs: mAP50 sits at 0.93-0.94 while mAP50-95 sits at ~0.70, and the run is within 0.02 of its ceiling by epoch 54 while train_box keeps falling (0.87 -> 0.63) with val_box frozen at ~0.85-0.87. Validation box loss stops improving after epoch ~61 even though the LR is still 5.8e-4, which means the localization head has saturated at the resolution the data can support; extra optimization is being absorbed by train-set-specific box refinement that does not transfer. That reframes the problem: the remaining headroom is not localization tightening (box/DFL and LR-schedule changes have all tied or regressed: box 9.0, lr0 0.0022, lrf 0.005+momentum 0.94), it is detection ranking and confidence. Precision 0.968 vs recall 0.882 means ~12% of the 185 boxes never clear the threshold at all, and every missed box costs the full IoU sweep. The single real improvement in the whole history (iteration 4, +0.010) came from doubling cls, which lifted yellow from 0.669 to 0.724 and red to 0.746 — i.e. from making the classification branch more assertive, exactly the lever that attacks recall-limited ranking. Green remains stuck at 0.666-0.69 in every configuration, and notably it did not benefit from cls=0.9, which suggests green is not merely mis-ranked but photometrically ambiguous: bright small emitters whose only cue is a few saturated pixels, a cue that hsv_v jitter directly degrades.",
+    "hypothesis": "Continuing along the only axis that has produced a real gain, raising cls from 0.9 to 1.2 should further sharpen class/objectness logits and push more borderline true positives above the confidence threshold, converting the 0.882 recall into detections that then contribute across the whole IoU sweep; because localization has demonstrably plateaued (val_box flat from epoch 61 onward), gains must come from recall and ranking rather than tighter boxes, and box stays at its confirmed best 7.5 so IoU quality is not traded away. Simultaneously lowering hsv_v from 0.4 to 0.28 targets the persistent green-light deficit through an untested direction: green lamps are small, self-luminous, and often surrounded by foliage or other bright point sources, so their discriminative signal is absolute brightness and local contrast — the very attribute that aggressive value jitter randomizes. With validation imagery having consistent exposure, reducing photometric distortion should let the classifier rely on the lamp's true intensity/contrast signature, raising green AP and hence overall mAP50-95, while mosaic stays at 1.0 so the dataset's dominant regularizer is untouched. The two changes are complementary rather than confounded: both act on the classification pathway, and their signatures differ (cls should lift yellow/red ranking, hsv_v should lift green specifically), so per-class AP will let me attribute the effect.",
+    "changes": [
+      {
+        "param": "cls",
+        "from": 0.9,
+        "to": 1.2,
+        "reason": "cls 0.5 -> 0.9 is the only change in seven iterations that produced a gain beyond noise (+0.010, driven by yellow +0.056 and red +0.007). With recall 0.88 against precision 0.97 the detector is still over-conservative, so pushing the classification loss share further should promote additional borderline lamps above threshold and improve PR ranking, which is what averaging over IoU 0.5:0.95 rewards. 1.2 is a moderate extension of a proven direction and leaves headroom before the 1.5 cap."
+      },
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.28,
+        "reason": "Lowering hsv_v has never been tested; only the upward move (0.55) was tried and it hurt green (0.691 -> 0.678). Green light is the class that never improves under any setting, and its cue is the absolute brightness/contrast of a small emitter, exactly what value jitter destroys. Reducing the jitter aligns training photometrics with the consistently exposed validation set and should recover the intensity cue for small green lamps without removing augmentation entirely."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 8,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.04,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9374,
+    "map5095": 0.6962,
+    "per_class": {
+      "green light": 0.6714,
+      "red light": 0.7244,
+      "yellow light": 0.6928
+    },
+    "minutes": 6.75,
+    "llm_seconds": 56.7,
+    "run_name": "llm_opus_s0_i08",
+    "verdict": "regressed",
+    "diagnosis": "The iteration-7 curve is the clearest evidence yet that this configuration is no longer limited by optimization or by classification, but by localization generalization. val_box drops quickly until ~epoch 37 (0.921) and then sits in a narrow 0.85-0.92 band for the remaining 60+ epochs, while train_box keeps falling from 0.919 to 0.641 - a 30% reduction that buys essentially nothing on validation. Notably the collapse in train_box accelerates exactly when the LR falls below ~1e-4 (epochs 85-100), and that is also the window where mAP50-95 goes from its peak 0.7058 (epoch 89) down to 0.6855 (epoch 100). So the ultra-low-LR tail is sharpening the model onto the 509-image training set's box targets rather than refining generalizable box edges; 38% of the budget is spent on the last 0.02 of mAP and the very end is actively harmful. The cls=1.2 result reinforces the separation of concerns: mAP50 rose to its highest value ever (0.946) and green AP recovered to 0.694, i.e. detection/recall improved, yet mAP50-95 fell - the extra detections came in with looser boxes. Pushing cls further is therefore exhausted (0.9 remains the best trade point), and pushing box weight is unlikely to help either, because the failure is not too little box gradient (train_box already halves) but that additional box gradient does not transfer. The remaining unexploited lever is the shape of the LR schedule's tail: lr0 upward failed (it7/it5), lrf downward (longer tiny-LR tail) tied, and the tiny-LR tail is where the degradation happens - upward lrf has never been tried.",
+    "hypothesis": "Raising lrf from 0.01 to 0.04 lifts the terminal learning rate from ~1.4e-5 to ~5.7e-5 and, more importantly, keeps the whole final third of the schedule in a 1e-4..6e-5 band instead of decaying into the near-zero regime where train_box collapsed without any val_box improvement. Mechanism: at 509 images / ~32 steps per epoch, the last 15 epochs at LR<1e-4 provide almost no exploration but plenty of deterministic descent onto the training boxes, producing the observed train/val divergence and the 0.7058 -> 0.6855 end-of-run decay. A higher LR floor preserves enough gradient noise to keep the parameters averaging over a wider basin, which should raise the val_box floor (currently pinned at ~0.85-0.89) and hence the high-IoU part of the mAP sweep, while sacrificing only the marginal last-epoch polish that measurably did not help. I expect mAP50 to stay near 0.93-0.94 and the gain to come from tighter boxes in the IoU 0.65-0.9 band, plus a flatter, less degrading late-stage mAP curve. If instead the score ties or drops, that pins down the refinement tail as genuinely necessary and rules out the entire lrf axis, since lrf=0.005 already tied.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.04,
+        "reason": "The measured damage in the latest run occurs precisely in the LR<1e-4 window (train_box 0.763 -> 0.641 while mAP50-95 falls from its epoch-89 peak). Raising the LR floor removes that unproductive, sharpening-only phase and keeps more of the 100-epoch budget at learning rates that actually moved val_box, an untested direction since only lrf<=0.01 has been probed."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 9,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.0009,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 1.0,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9354,
+    "map5095": 0.7062,
+    "per_class": {
+      "green light": 0.6813,
+      "red light": 0.7159,
+      "yellow light": 0.7213
+    },
+    "minutes": 6.78,
+    "llm_seconds": 54.2,
+    "run_name": "llm_opus_s0_i09",
+    "verdict": "regressed",
+    "diagnosis": "The lrf=0.04 run behaved exactly like the other schedule-shape experiments: mAP is essentially at its plateau by epoch ~52 and the remaining half of the budget converts a large drop in train_box (0.83 -> 0.64) into almost nothing on val_box (0.90 -> 0.86) and mAP. Combined with iteration 3 (lrf=0.005, tie) and iteration 8 (lrf=0.04, regressed), the LR *tail* axis is now exhausted in both directions: neither more nor less terminal polish moves the plateau height, so the ceiling is set earlier in training, not at the end. The precision/recall split (0.976 / 0.889) is unchanged across every run: the detector is systematically conservative, misses ~11% of boxes, and its localization quality on the boxes it does find saturates (val_box floor ~0.86-0.90 in every run). Meanwhile the one experiment that increased the *magnitude* of updates (lr0=0.0022, iter 5) clearly regressed (0.689), and the widening train/val loss gap without any rise in val loss says the model is spending its later updates memorizing training-box geometry rather than learning transferable localization. Taken together this points to a step-size that is already too large for a 509-image / ~32-step-per-epoch regime with a COCO-pretrained backbone: the model commits early to a solution (plateau by epoch 52) and then over-fits box targets. The untested half of the lr0 axis (below default) is therefore the most informative and most promising remaining direction; iteration 5 gives a clean monotone gradient hint that smaller is better.",
+    "hypothesis": "Lowering lr0 from 0.001429 to 0.0009 (0.63x) while shortening warmup to 1.0 epoch should raise the plateau rather than merely delay it. Mechanism: with a pretrained backbone and only ~3200 total optimizer steps, large AdamW steps early in training pull the box/DFL head far from its COCO initialization before the tiny dataset can provide a reliable gradient direction, which is why every run locks into the same 0.86-0.90 val_box floor by epoch ~52 and then only over-fits train boxes. A smaller peak LR keeps the backbone features closer to their transferable COCO state and makes the whole mid-schedule (epochs 20-70, where all mAP is actually gained) operate in a finer-grained regime, which should tighten boxes in the IoU 0.7-0.9 band where the 0.93 mAP50 vs 0.71 mAP50-95 gap lives, and should also let borderline low-contrast green lamps be scored more consistently instead of being pushed below threshold. Since iteration 5 showed the opposite direction (1.55x lr0) costs ~0.023 mAP, the response along this axis is steep, so a 0.63x move should give a clearly interpretable signal either way. Warmup is cut from 1.5 to 1.0 because with a lower peak LR the destabilizing transient that warmup exists to damp is proportionally smaller, and the 3.0 -> 1.5 move already helped; this returns another half epoch to the productive mid-schedule. cls stays at its confirmed best 0.9 (1.2 regressed), mosaic at 1.0 (0.7 and 0.8 regressed), lrf back to 0.01 (0.04 regressed, 0.005 tied).",
+    "changes": [
+      {
+        "param": "lr0",
+        "from": 0.001429,
+        "to": 0.0009,
+        "reason": "The only lr0 experiment so far (0.0022) regressed by 0.023, and the training dynamics (early plateau followed by train-only loss descent) indicate the update magnitude is too large for ~3200 total steps on a pretrained backbone. The sub-default half of the lr0 range is untested and is the strongest remaining lever on plateau height."
+      },
+      {
+        "param": "warmup_epochs",
+        "from": 1.5,
+        "to": 1.0,
+        "reason": "A lower peak LR reduces the need for a warmup ramp, and the 3.0 -> 1.5 reduction was part of the only confirmed improvement; giving another half epoch to the mid-schedule phase where mAP is actually gained extends that trend at minimal risk."
+      },
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.01,
+        "reason": "Unchanged from the base (iteration 4); listed only to make explicit that the regressed lrf=0.04 from the most recent run is reverted rather than carried forward."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 10,
+    "backend": "opus",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0014,
+      "warmup_epochs": 1.5,
+      "box": 7.5,
+      "cls": 0.9,
+      "hsv_v": 0.5,
+      "mosaic": 1.0
+    },
+    "map50": 0.9309,
+    "map5095": 0.6979,
+    "per_class": {
+      "green light": 0.6636,
+      "red light": 0.7261,
+      "yellow light": 0.7038
+    },
+    "minutes": 6.87,
+    "llm_seconds": 45.5,
+    "run_name": "llm_opus_s0_i10",
+    "verdict": "regressed",
+    "diagnosis": "The iteration-9 run confirms that the bottleneck is not the learning-rate schedule but generalization of the regression head. train_box falls monotonically from 1.24 to 0.61 while val_box stalls at ~0.85 from epoch 49 onward and never improves again — the model keeps sharpening its fit to the 509 training boxes without any transfer to validation geometry. Precision 0.979 vs recall 0.884 shows the detector is still conservative: the missing mAP is unretrieved objects and imperfectly localized borderline objects, not false positives. Lowering lr0 to 0.0009 simply reproduced the same val_box floor with slightly less progress, which means the plateau is not step-size-limited either: every schedule variant (lrf 0.005, 0.04, lr0 0.0022, 0.0009, warmup 1.0/1.5/3.0) lands in the 0.69-0.71 band, so the entire optimization-schedule axis is now effectively exhausted. What has never been tested cleanly is capacity/regularization pressure: the one weight_decay probe (iter 2) and the one hsv_v probe (iter 2, 7) were both run on the obsolete cls=0.5 base and/or confounded with a second change. Given that the geometric regularizer (mosaic) is already saturated at 1.0 and reducing it regressed twice, the remaining levers for closing a train/val gap that is 10x wider at the end than at the start are parameter-space decay and photometric jitter.",
+    "hypothesis": "On top of the confirmed best configuration (cls=0.9, warmup=1.5, mosaic=1.0, lr0=0.001429, lrf=0.01), raising weight_decay from 0.0005 to 0.0014 and hsv_v from 0.4 to 0.5 should lift the val_box floor and hence the high-IoU portion of the mAP sweep. Mechanism (weight_decay): with ~3.2M parameters and only ~3200 optimizer steps over 509 images, the DFL/box head can drive its bin logits to very peaked distributions that exactly reproduce training box edges; stronger L2 pressure keeps those logits flatter and the backbone features closer to their broadly transferable COCO state, so the late-stage descent in train_box has to be achieved with smoother, more general weights instead of memorized offsets — exactly the failure signature (train loss down, val loss flat, mAP flat after epoch 42). Mechanism (hsv_v): the green class remains the weakest in the best config (0.666 vs 0.746/0.724), and green lamps are self-luminous, small, and highly variable in exposure/bloom; stronger value jitter forces both the classifier and the box head to key on lamp geometry and position inside the housing rather than absolute brightness, which should raise green AP and add recall to the currently 0.88 recall figure. Note the earlier hsv_v=0.28 (less jitter) direction regressed, so the informative direction is more jitter, and hsv_v=0.55 was only ever tested on the old cls=0.5 base where it tied. The two changes are complementary regularizers acting on different pathways and their signatures are separable: weight_decay should show up as a lower val_box floor across all three classes, hsv_v specifically as a green-light AP gain.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0014,
+        "reason": "The train/val loss gap grows 10x (0.017 -> 0.17) while val loss stays flat, i.e. the model is spending the last 57% of the budget memorizing training box distributions. Explicit L2 pressure is the untested lever that directly penalizes this without touching the schedule (all schedule variants have now failed) or the geometric augmentation (mosaic reduction regressed twice)."
+      },
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.5,
+        "reason": "Green light is still the weakest class in the best configuration despite having the most samples, and its discriminative cue (a small bright emitter) is the one most confounded by exposure variation. Reducing jitter (0.28) already regressed, so increasing photometric jitter is the informative direction; it also adds sample diversity to a 509-image set, reinforcing the weight_decay effect on the generalization gap."
+      }
+    ],
+    "base_iteration": 4,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  }
+]

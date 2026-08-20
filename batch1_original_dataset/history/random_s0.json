@@ -1,0 +1,277 @@
+[
+  {
+    "iteration": 0,
+    "method": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.94,
+    "map5095": 0.6995,
+    "per_class": {
+      "green light": 0.6907,
+      "red light": 0.7392,
+      "yellow light": 0.6687
+    },
+    "minutes": 6.72,
+    "run_name": "random_s0_i00",
+    "verdict": "baseline"
+  },
+  {
+    "iteration": 1,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.000385,
+      "lrf": 0.140764,
+      "momentum": 0.868711,
+      "weight_decay": 0.000979,
+      "warmup_epochs": 3.686587,
+      "box": 8.964756,
+      "cls": 0.843827,
+      "hsv_v": 0.399309,
+      "mosaic": 0.509579
+    },
+    "map50": 0.9553,
+    "map5095": 0.7106,
+    "per_class": {
+      "green light": 0.6917,
+      "red light": 0.7365,
+      "yellow light": 0.7037
+    },
+    "minutes": 6.7,
+    "run_name": "random_s0_i01",
+    "verdict": "improved"
+  },
+  {
+    "iteration": 2,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002161,
+      "lrf": 0.110685,
+      "momentum": 0.962065,
+      "weight_decay": 0.000436,
+      "warmup_epochs": 1.900638,
+      "box": 5.145486,
+      "cls": 0.439981,
+      "hsv_v": 0.203522,
+      "mosaic": 0.578345
+    },
+    "map50": 0.9357,
+    "map5095": 0.709,
+    "per_class": {
+      "green light": 0.6742,
+      "red light": 0.7357,
+      "yellow light": 0.717
+    },
+    "minutes": 6.63,
+    "run_name": "random_s0_i02",
+    "verdict": "tie"
+  },
+  {
+    "iteration": 3,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001505,
+      "lrf": 0.100166,
+      "momentum": 0.860644,
+      "weight_decay": 0.000744,
+      "warmup_epochs": 1.289334,
+      "box": 5.055182,
+      "cls": 0.64062,
+      "hsv_v": 0.247083,
+      "mosaic": 0.655519
+    },
+    "map50": 0.9277,
+    "map5095": 0.7032,
+    "per_class": {
+      "green light": 0.6731,
+      "red light": 0.7097,
+      "yellow light": 0.7268
+    },
+    "minutes": 6.62,
+    "run_name": "random_s0_i03",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 4,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.004464,
+      "lrf": 0.082999,
+      "momentum": 0.926521,
+      "weight_decay": 0.001734,
+      "warmup_epochs": 1.914157,
+      "box": 7.578586,
+      "cls": 1.000477,
+      "hsv_v": 0.57888,
+      "mosaic": 0.516091
+    },
+    "map50": 0.9234,
+    "map5095": 0.6762,
+    "per_class": {
+      "green light": 0.6663,
+      "red light": 0.7187,
+      "yellow light": 0.6436
+    },
+    "minutes": 6.71,
+    "run_name": "random_s0_i04",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 5,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001889,
+      "lrf": 0.088886,
+      "momentum": 0.908977,
+      "weight_decay": 0.000753,
+      "warmup_epochs": 3.049777,
+      "box": 6.962077,
+      "cls": 0.34909,
+      "hsv_v": 0.367413,
+      "mosaic": 0.51183
+    },
+    "map50": 0.9337,
+    "map5095": 0.6945,
+    "per_class": {
+      "green light": 0.6636,
+      "red light": 0.7275,
+      "yellow light": 0.6922
+    },
+    "minutes": 6.64,
+    "run_name": "random_s0_i05",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 6,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002831,
+      "lrf": 0.030719,
+      "momentum": 0.942501,
+      "weight_decay": 0.000674,
+      "warmup_epochs": 4.753301,
+      "box": 5.963592,
+      "cls": 1.214382,
+      "hsv_v": 0.266257,
+      "mosaic": 0.983044
+    },
+    "map50": 0.94,
+    "map5095": 0.6939,
+    "per_class": {
+      "green light": 0.6889,
+      "red light": 0.7329,
+      "yellow light": 0.66
+    },
+    "minutes": 6.61,
+    "run_name": "random_s0_i06",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 7,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.000521,
+      "lrf": 0.085582,
+      "momentum": 0.864366,
+      "weight_decay": 0.001529,
+      "warmup_epochs": 3.04514,
+      "box": 5.24837,
+      "cls": 0.353769,
+      "hsv_v": 0.494374,
+      "mosaic": 0.577175
+    },
+    "map50": 0.9341,
+    "map5095": 0.6982,
+    "per_class": {
+      "green light": 0.6726,
+      "red light": 0.7396,
+      "yellow light": 0.6824
+    },
+    "minutes": 6.62,
+    "run_name": "random_s0_i07",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 8,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.002588,
+      "lrf": 0.056904,
+      "momentum": 0.932863,
+      "weight_decay": 0.000561,
+      "warmup_epochs": 2.892674,
+      "box": 9.851681,
+      "cls": 0.402226,
+      "hsv_v": 0.326952,
+      "mosaic": 0.838222
+    },
+    "map50": 0.9228,
+    "map5095": 0.68,
+    "per_class": {
+      "green light": 0.684,
+      "red light": 0.7123,
+      "yellow light": 0.6438
+    },
+    "minutes": 6.6,
+    "run_name": "random_s0_i08",
+    "verdict": "regressed"
+  },
+  {
+    "iteration": 9,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.001369,
+      "lrf": 0.102931,
+      "momentum": 0.871052,
+      "weight_decay": 0.00166,
+      "warmup_epochs": 1.925598,
+      "box": 7.761643,
+      "cls": 1.411629,
+      "hsv_v": 0.358952,
+      "mosaic": 0.983934
+    },
+    "map50": 0.9387,
+    "map5095": 0.7075,
+    "per_class": {
+      "green light": 0.6905,
+      "red light": 0.7277,
+      "yellow light": 0.7043
+    },
+    "minutes": 6.61,
+    "run_name": "random_s0_i09",
+    "verdict": "tie"
+  },
+  {
+    "iteration": 10,
+    "method": "random",
+    "hyp": {
+      "lr0": 0.004896,
+      "lrf": 0.015632,
+      "momentum": 0.944336,
+      "weight_decay": 0.001019,
+      "warmup_epochs": 4.766893,
+      "box": 7.034272,
+      "cls": 1.403092,
+      "hsv_v": 0.263659,
+      "mosaic": 0.99739
+    },
+    "map50": 0.9182,
+    "map5095": 0.686,
+    "per_class": {
+      "green light": 0.6707,
+      "red light": 0.7205,
+      "yellow light": 0.6668
+    },
+    "minutes": 6.61,
+    "run_name": "random_s0_i10",
+    "verdict": "regressed"
+  }
+]

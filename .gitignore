@@ -1,0 +1,10 @@
+.env
+venv/
+__pycache__/
+runs/
+runs_for_handoff/
+history/
+traces/
+datasets/
+*.pt
+final_verification.json

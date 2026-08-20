@@ -1,0 +1,53 @@
+{
+  "source": "Sonnet 5, iteration 5",
+  "hyp": {
+    "lr0": 0.001429,
+    "lrf": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0008,
+    "warmup_epochs": 4.5,
+    "box": 6.0,
+    "cls": 0.9,
+    "hsv_v": 0.6,
+    "mosaic": 1.0
+  },
+  "results": [
+    {
+      "seed": 0,
+      "map50": 0.9349,
+      "map5095": 0.7187,
+      "per_class": {
+        "green light": 0.6862,
+        "red light": 0.7561,
+        "yellow light": 0.7137
+      },
+      "minutes": 6.73
+    },
+    {
+      "seed": 1,
+      "map50": 0.944,
+      "map5095": 0.7018,
+      "per_class": {
+        "green light": 0.6862,
+        "red light": 0.7425,
+        "yellow light": 0.6766
+      },
+      "minutes": 6.67
+    },
+    {
+      "seed": 2,
+      "map50": 0.9471,
+      "map5095": 0.7181,
+      "per_class": {
+        "green light": 0.7091,
+        "red light": 0.7456,
+        "yellow light": 0.6997
+      },
+      "minutes": 6.67
+    }
+  ],
+  "mean_map5095": 0.7129,
+  "std_map5095": 0.0078,
+  "baseline_mean": 0.7024,
+  "baseline_std": 0.0026
+}

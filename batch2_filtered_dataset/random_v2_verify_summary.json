@@ -1,0 +1,25 @@
+{
+  "method": "Random Search",
+  "source": "history/random_v2_s0.json iteration 7",
+  "results": [
+    {
+      "seed": 0,
+      "map50": 0.9716,
+      "map5095": 0.673
+    },
+    {
+      "seed": 1,
+      "map50": 0.96,
+      "map5095": 0.6533
+    },
+    {
+      "seed": 2,
+      "map50": 0.9605,
+      "map5095": 0.6637
+    }
+  ],
+  "mean_map5095": 0.6633,
+  "std_map5095": 0.008,
+  "baseline_map5095": 0.6463,
+  "improvement_over_baseline": 0.017
+}

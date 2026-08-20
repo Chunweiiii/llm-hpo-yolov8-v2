@@ -1,0 +1,494 @@
+[
+  {
+    "iteration": 0,
+    "backend": "default",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.94,
+    "map5095": 0.6995,
+    "per_class": {
+      "green light": 0.6907,
+      "red light": 0.7392,
+      "yellow light": 0.6687
+    },
+    "minutes": 7.21,
+    "run_name": "llm_haiku_s0_i00",
+    "verdict": "baseline",
+    "diagnosis": "",
+    "hypothesis": "",
+    "changes": [],
+    "base_iteration": null,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 1,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.05,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.8,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.937,
+    "map5095": 0.6983,
+    "per_class": {
+      "green light": 0.6799,
+      "red light": 0.7373,
+      "yellow light": 0.6777
+    },
+    "minutes": 7.06,
+    "llm_seconds": 7.8,
+    "run_name": "llm_haiku_s0_i01",
+    "verdict": "tie",
+    "diagnosis": "The latest run achieved 0.7003 mAP at epoch 90, which is within noise of the baseline (0.6995). The training dynamics reveal a critical inefficiency: the model converged to near-peak performance by epoch 52 (48% of budget), then spent the remaining 52% of epochs extracting only marginal gains. The widening train-val loss gap in late epochs (0.0097 → 0.1543) indicates that the learning rate schedule is too aggressive in its decay—the model is still learning (train loss falling) but validation performance has plateaued, suggesting the optimizer is making fine adjustments that don't translate to detection metrics. This is not overfitting (val loss stable), but rather a mismatch between optimization trajectory and the validation metric landscape. The per-class breakdown shows green light remains the bottleneck (0.6907 AP), suggesting the model struggles with this class's visual characteristics or the loss weighting doesn't adequately prioritize it.",
+    "hypothesis": "The learning rate decay (lrf=0.01) is too steep, causing the learning rate to drop below the effective optimization zone too early. By increasing lrf to 0.05, the learning rate will decay more gradually, allowing the optimizer to explore the loss landscape more thoroughly in the later epochs and potentially find better minima that improve validation mAP. Additionally, increasing the classification loss weight (cls) from 0.5 to 0.8 will place greater emphasis on correct class prediction, which should help the underperforming green light class by forcing the model to learn more discriminative features for it.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.05,
+        "reason": "The steep decay schedule exhausts the learning budget early; a gentler decay allows continued optimization in later epochs where validation metrics plateau, potentially unlocking gains that the current schedule misses."
+      },
+      {
+        "param": "cls",
+        "from": 0.5,
+        "to": 0.8,
+        "reason": "Green light AP (0.6907) lags significantly behind red and yellow. Increasing classification loss weight prioritizes correct class assignment, which should improve the model's ability to distinguish green light from other classes."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 2,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0012,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 0.8
+    },
+    "map50": 0.9277,
+    "map5095": 0.689,
+    "per_class": {
+      "green light": 0.663,
+      "red light": 0.7085,
+      "yellow light": 0.6956
+    },
+    "minutes": 7.06,
+    "llm_seconds": 7.2,
+    "run_name": "llm_haiku_s0_i02",
+    "verdict": "regressed",
+    "diagnosis": "The iteration 1 configuration (lrf=0.05, cls=0.8) failed to improve over baseline and actually regressed slightly (0.6983 vs 0.6995). The latest training run shows that while the model reaches near-peak performance by epoch 60, it then plateaus despite continued training. The widening train-val loss gap in late epochs indicates the model is overfitting to training dynamics rather than generalizing—the learning rate decay (lrf=0.05) may be too gradual, keeping the learning rate elevated too long and allowing the model to memorize noise. Additionally, the increased cls weight (0.8) did not help the underperforming green light class (0.6799 in iter 1 vs 0.6907 in iter 0), suggesting that simply upweighting classification loss is not the right lever. The baseline configuration (iteration 0) remains the best performer and should be the foundation for the next attempt.",
+    "hypothesis": "The baseline learning rate schedule (lrf=0.01) is actually well-tuned for this small dataset and model size. The problem is not the decay rate but rather insufficient regularization in the later training phase. By increasing weight_decay from 0.0005 to 0.0012, we can add stronger L2 regularization to prevent overfitting and reduce the train-val loss divergence observed in late epochs. Additionally, reducing mosaic augmentation from 1.0 to 0.8 will decrease the aggressive mixing of training samples, which may be introducing noise that confuses the model on small, semantically-sensitive objects like traffic lights. These changes should stabilize validation performance and allow the model to maintain gains throughout training rather than plateauing early.",
+    "changes": [
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0012,
+        "reason": "The widening train-val loss gap in late epochs indicates overfitting. Stronger L2 regularization will penalize large weights and reduce memorization, helping the model generalize better on the validation set."
+      },
+      {
+        "param": "mosaic",
+        "from": 1.0,
+        "to": 0.8,
+        "reason": "Mosaic augmentation at full strength may be too aggressive for small, semantically-sensitive objects like traffic lights. Reducing it will preserve more natural image structure and reduce noise that could confuse class discrimination, particularly for the underperforming green light class."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 3,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.08,
+      "momentum": 0.9,
+      "weight_decay": 0.0003,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9359,
+    "map5095": 0.698,
+    "per_class": {
+      "green light": 0.6809,
+      "red light": 0.7364,
+      "yellow light": 0.6766
+    },
+    "minutes": 7.16,
+    "llm_seconds": 9.6,
+    "run_name": "llm_haiku_s0_i03",
+    "verdict": "tie",
+    "diagnosis": "The latest run reveals a fundamental mismatch between optimization and detection performance. The model's training loss continues to decrease smoothly throughout all 100 epochs, but validation mAP plateaus by epoch 38 and then degrades slightly. The widening train-val loss gap (0.0186 → 0.1832) is not due to overfitting in the classical sense—validation loss itself remains stable around 0.86-0.90—but rather indicates that the model is optimizing for a loss landscape that no longer correlates with detection quality. This suggests the learning rate schedule is decaying too aggressively: by epoch 37, the learning rate has already fallen to 0.00092, and by epoch 61 it's at 0.00058. At these low rates, the optimizer lacks sufficient momentum to escape local minima or explore regions that would improve mAP. The model gets stuck in a state where it can reduce loss through minor weight adjustments, but these adjustments do not translate to better bounding box or class predictions. The aggressive weight_decay=0.0012 from iteration 2 may also be constraining the model's ability to make meaningful updates in later epochs.",
+    "hypothesis": "The baseline configuration (iteration 0) achieved the best mAP so far (0.6995), and the subsequent attempts to improve it by increasing weight_decay or adjusting mosaic both regressed. The core issue is that the learning rate decays too quickly for a small dataset and nano model. By increasing lrf from 0.01 to 0.08, the learning rate will decay more gradually, keeping it in a productive range for longer. This will allow the optimizer to continue making meaningful updates in epochs 50-100, where the current schedule has already become too conservative. Additionally, reducing weight_decay back to 0.0005 (the baseline value that worked well) will remove the over-regularization that was introduced in iteration 2 and shown to harm performance. These two changes together should extend the productive optimization window and allow the model to improve mAP in the later training phase rather than stagnating.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.08,
+        "reason": "The baseline lrf=0.01 causes the learning rate to decay too steeply for this small dataset. By epoch 37, lr has fallen to 0.00092, which is too low to drive meaningful improvements. Increasing to 0.08 will keep the learning rate higher for longer, allowing continued optimization in epochs 50-100 where the current schedule stagnates."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0003,
+        "reason": "Iteration 2 showed that increasing weight_decay to 0.0012 regressed performance. The baseline 0.0005 was better. Reducing it further to 0.0003 will decrease L2 regularization pressure, allowing the model more freedom to adjust weights in response to the extended learning rate schedule and escape the local minimum where loss decreases but mAP does not."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 4,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.02,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 8.5,
+      "cls": 0.5,
+      "hsv_v": 0.4,
+      "mosaic": 1.0
+    },
+    "map50": 0.9356,
+    "map5095": 0.704,
+    "per_class": {
+      "green light": 0.6933,
+      "red light": 0.7189,
+      "yellow light": 0.6997
+    },
+    "minutes": 6.93,
+    "llm_seconds": 9.9,
+    "run_name": "llm_haiku_s0_i04",
+    "verdict": "tie",
+    "diagnosis": "The latest run (iteration 3) reveals a critical pathology: the model reaches near-peak performance by epoch 48 (mAP 0.6973), then spends the remaining 52 epochs making negligible gains while the train-val loss gap widens dramatically (0.0035 → 0.1599). This is not overfitting—validation loss remains stable—but rather a learning rate schedule that decays too aggressively. With lrf=0.08, the learning rate drops from 0.001429 to 0.000127 by epoch 100, becoming too small to drive meaningful optimization in the final phase. The model converges prematurely to a local minimum and cannot escape it. The training curve shows train_box loss continuing to fall (0.626 at epoch 97) while mAP stagnates, indicating the optimizer is still active but the loss landscape changes are no longer translating to better detection quality. This suggests the learning rate has fallen below the threshold needed to explore the loss landscape effectively, and the model is trapped in a plateau.",
+    "hypothesis": "The baseline configuration (iteration 0, mAP 0.6995) remains the best performer and should be the foundation. The core problem is that even lrf=0.08 (iteration 3) decays the learning rate too quickly for a small dataset and nano model. I will reduce lrf further to 0.02 (slower decay than baseline's 0.01) to keep the learning rate in a productive range throughout all 100 epochs. Additionally, I will increase the box loss weight from 7.5 to 8.5 to place greater emphasis on precise localization, which is critical for small objects like traffic lights and may help the underperforming green light class by forcing the model to learn tighter bounding box predictions. These two changes together should extend the optimization window and prevent premature convergence.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.02,
+        "reason": "Iteration 3 showed that lrf=0.08 still leads to premature convergence and stagnation after epoch 48. A slower decay (lrf=0.02) will keep the learning rate higher for longer, allowing the optimizer to continue making meaningful updates throughout all 100 epochs and avoid getting trapped in local minima."
+      },
+      {
+        "param": "box",
+        "from": 7.5,
+        "to": 8.5,
+        "reason": "The green light class underperforms (AP 0.6907 in baseline), and traffic lights are small objects requiring precise localization. Increasing the box loss weight will force the model to learn tighter, more discriminative bounding box predictions, which should improve detection quality especially for the challenging green light class."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 5,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 1.0,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9446,
+    "map5095": 0.7153,
+    "per_class": {
+      "green light": 0.6945,
+      "red light": 0.742,
+      "yellow light": 0.7093
+    },
+    "minutes": 7.0,
+    "llm_seconds": 9.6,
+    "run_name": "llm_haiku_s0_i05",
+    "verdict": "improved",
+    "diagnosis": "The latest training run reveals a fundamental mismatch between optimization and detection performance. The model continues to reduce training loss throughout all 100 epochs (train_box: 1.385 → 0.673), but validation mAP plateaus around epoch 37-49 and then oscillates without meaningful improvement. The widening train-val loss gap (0.0176 → 0.2128) indicates the model is learning increasingly fine-grained patterns that do not generalize to detection quality. This suggests the learning rate schedule (lrf=0.02) is keeping the learning rate too high for too long in the later epochs, causing the optimizer to make small, noisy updates that reduce loss without improving the underlying feature representations needed for robust detection. The green light class remains weak (0.6933 AP), suggesting the model struggles with class-specific discrimination despite the increased box loss weight. The configuration has reached a local plateau where further incremental adjustments to the same parameters are unlikely to break through.",
+    "hypothesis": "The baseline configuration (iteration 0) achieved 0.6995 mAP and represents the most stable point in the search space. The subsequent iterations have explored lrf (0.01 → 0.02, 0.05, 0.08) and box weight (7.5 → 8.5) without consistent gains. The green light class weakness suggests the model needs stronger class-level supervision and/or better feature diversity. I will increase the classification loss weight (cls) from 0.5 to 1.0 to force the model to learn more discriminative features for each class, particularly green light. Additionally, I will reduce hsv_v from 0.4 to 0.3 to decrease the intensity of value augmentation, which may be introducing excessive brightness variations that confuse the model on color-sensitive objects like traffic lights. These changes target the root cause (class discrimination) rather than further tweaking the learning rate schedule, which has shown diminishing returns.",
+    "changes": [
+      {
+        "param": "cls",
+        "from": 0.5,
+        "to": 1.0,
+        "reason": "The green light class consistently underperforms (AP ~0.69) despite having the most training samples. Doubling the classification loss weight will force the model to allocate more capacity to learning discriminative features for each class, particularly the weak green light class. This is a direct intervention on the class-level learning signal rather than indirect tuning of the learning rate."
+      },
+      {
+        "param": "hsv_v",
+        "from": 0.4,
+        "to": 0.3,
+        "reason": "Traffic lights are color-sensitive objects where brightness variations can alter semantic meaning (a dim green light may be harder to distinguish from yellow). Reducing hsv_v from 0.4 to 0.3 will decrease the intensity of value augmentation, preserving more natural brightness distributions and reducing augmentation-induced noise that may confuse the model on color discrimination tasks."
+      }
+    ],
+    "base_iteration": 0,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 6,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.04,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 0.7,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9421,
+    "map5095": 0.7022,
+    "per_class": {
+      "green light": 0.6861,
+      "red light": 0.7295,
+      "yellow light": 0.6909
+    },
+    "minutes": 7.42,
+    "llm_seconds": 9.3,
+    "run_name": "llm_haiku_s0_i06",
+    "verdict": "regressed",
+    "diagnosis": "The latest training run reveals a critical decoupling between loss optimization and detection performance. The model continues to reduce training and validation loss throughout all 100 epochs (train_box: 1.212→0.635, val_box: 1.316→0.818), yet mAP plateaus around epoch 76 and even slightly regresses afterward (0.7159 at epoch 95 vs 0.7093 final). This indicates that the loss landscape being optimized no longer corresponds to meaningful improvements in object detection metrics. The widening train-val loss gap (0.0313→0.1311) combined with stable validation loss suggests the model is learning increasingly fine-grained but semantically irrelevant distinctions. The learning rate schedule (lrf=0.01) keeps the learning rate productive too long (0.000071 at epoch 97), allowing the optimizer to overfit to noise in the small validation set rather than generalizing. The cls=1.0 weight, while helping green light AP slightly (0.6945), may be causing the model to over-optimize class boundaries at the expense of robust localization. The configuration has reached a local plateau where further loss reduction is counterproductive.",
+    "hypothesis": "The learning rate is decaying too slowly, keeping optimization active in the noise-dominated late training phase. By increasing lrf from 0.01 to 0.04, the learning rate will decay faster and reach a near-zero value by epoch 70-80, allowing the model to stabilize on a good solution rather than continuing to chase noise. Additionally, reducing cls from 1.0 back to 0.7 will rebalance the loss function—the cls=1.0 setting appears to have helped green light slightly but at the cost of overall mAP stability. A moderate cls value should maintain class discrimination without over-weighting classification at the expense of localization robustness. Together, these changes will prevent late-stage overfitting and allow the model to converge to a more generalizable solution.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.04,
+        "reason": "The current lrf=0.01 keeps the learning rate too high for too long (0.000071 at epoch 97), allowing the optimizer to chase noise in the small validation set. Increasing to 0.04 will cause faster decay, reaching near-zero learning rate by epoch 70-80, preventing the late-stage loss reduction that is not translating to mAP gains."
+      },
+      {
+        "param": "cls",
+        "from": 1.0,
+        "to": 0.7,
+        "reason": "The cls=1.0 weight may be over-emphasizing class discrimination at the expense of overall detection robustness. A moderate value of 0.7 will maintain the class-discrimination benefit observed for green light (0.6945) while reducing the risk of over-fitting to class boundaries and allowing better localization-classification balance."
+      }
+    ],
+    "base_iteration": 5,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 7,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.95,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 1.0,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9386,
+    "map5095": 0.7067,
+    "per_class": {
+      "green light": 0.6854,
+      "red light": 0.7303,
+      "yellow light": 0.7045
+    },
+    "minutes": 7.09,
+    "llm_seconds": 8.2,
+    "run_name": "llm_haiku_s0_i07",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 6 regressed to 0.7022 mAP, confirming that lrf=0.04 and cls=0.7 were poor choices. The latest training run reveals a critical pattern: the model achieves high precision (0.9846) but low recall (0.8576), indicating it is being overly conservative and missing detections. The widening train-val loss gap (0.0161 → 0.1578) combined with stagnant mAP suggests the learning rate is decaying too aggressively, causing the optimizer to settle into a suboptimal local minimum where the model learns to be selective rather than comprehensive. The best mAP (0.7018 at epoch 77) occurs well before convergence, and the model never recovers, indicating the learning rate has already become too small to escape this conservative regime. The root cause is that lrf=0.04 decays the learning rate too quickly for this small dataset, leaving insufficient optimization capacity in epochs 70-100 to improve recall and overall detection performance.",
+    "hypothesis": "Iteration 5 achieved the best mAP (0.7153) with cls=1.0 and hsv_v=0.3, demonstrating that stronger class-level supervision helps the model learn discriminative features. The regression in iteration 6 was caused by reverting cls to 0.7 and increasing lrf to 0.04, both of which degraded performance. I will return to the iteration 5 configuration but make a targeted adjustment to address the recall deficit: increasing momentum from 0.9 to 0.95. Higher momentum will help the optimizer maintain velocity through the optimization landscape, preventing it from settling prematurely into conservative local minima and allowing it to explore regions with higher recall. This should preserve the class discrimination gains from cls=1.0 while improving the model's ability to detect all instances, not just the most confident ones.",
+    "changes": [
+      {
+        "param": "momentum",
+        "from": 0.9,
+        "to": 0.95,
+        "reason": "The precision-recall imbalance (0.9846 precision, 0.8576 recall) in iteration 6 indicates the optimizer is settling into overly conservative solutions. Higher momentum will maintain optimization velocity and prevent premature convergence to local minima that sacrifice recall. This is a parameter that has never been tested and is directly relevant to the observed training dynamics."
+      }
+    ],
+    "base_iteration": 5,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 8,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.015,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 1.0,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9411,
+    "map5095": 0.7063,
+    "per_class": {
+      "green light": 0.6981,
+      "red light": 0.7346,
+      "yellow light": 0.6861
+    },
+    "minutes": 6.99,
+    "llm_seconds": 9.4,
+    "run_name": "llm_haiku_s0_i08",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 7 regressed to 0.7067 mAP despite returning to cls=1.0, indicating that momentum=0.95 was the harmful change. The training curve reveals a critical pattern: loss continues to decrease throughout training (train_box: 1.235→0.656, val_box: 1.760→0.841), yet mAP plateaus after epoch 73 and even declines slightly in the final epochs. This decoupling suggests the model is overfitting to loss-space metrics that do not translate to detection quality. The widening train-val loss gap (0.0235→0.1214) combined with high final precision (0.9775) but moderate recall (0.8803) indicates the model is becoming increasingly conservative in its predictions—it makes fewer detections but with higher confidence. Higher momentum (0.95) likely exacerbates this by maintaining excessive velocity through the optimization landscape, causing the model to overshoot good solutions and settle into a high-precision, low-recall regime. The best configuration (iteration 5, mAP 0.7153) used momentum=0.9, which proved more stable. Reverting momentum and reducing the learning rate decay (lrf) slightly should allow finer-grained exploration in the later epochs and prevent the model from locking into an overly conservative prediction strategy.",
+    "hypothesis": "Iteration 5 achieved the best mAP (0.7153) with momentum=0.9, cls=1.0, and hsv_v=0.3. The regression in iteration 7 was caused by increasing momentum to 0.95, which destabilized the optimization. Additionally, the training curve shows that the learning rate decays too quickly (reaching 0.000071 by epoch 97), causing the model to lock into a conservative solution in the final epochs. By reverting momentum to 0.9 and increasing lrf from 0.01 to 0.015, the learning rate will decay more gradually, maintaining a productive optimization signal through epoch 100 and allowing the model to refine its recall without sacrificing precision. This should prevent the late-stage mAP plateau observed in iteration 7 and recover the performance gains from iteration 5.",
+    "changes": [
+      {
+        "param": "momentum",
+        "from": 0.95,
+        "to": 0.9,
+        "reason": "Iteration 7 with momentum=0.95 regressed to 0.7067 mAP. Iteration 5 with momentum=0.9 achieved the best result (0.7153). Higher momentum causes the optimizer to overshoot good solutions and settle into overly conservative predictions (high precision, moderate recall). Reverting to 0.9 restores stability."
+      },
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.015,
+        "reason": "The learning rate decays too quickly with lrf=0.01, reaching near-zero by epoch 97 and preventing meaningful optimization in the final epochs. The training curve shows mAP plateaus after epoch 73 while loss continues to decrease, indicating the model cannot refine its predictions. Increasing lrf to 0.015 will slow the decay, keeping the learning rate in a productive range through epoch 100 and allowing the model to improve recall without locking into a conservative regime."
+      }
+    ],
+    "base_iteration": 5,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 9,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.01,
+      "momentum": 0.9,
+      "weight_decay": 0.0008,
+      "warmup_epochs": 4.5,
+      "box": 7.5,
+      "cls": 1.0,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9379,
+    "map5095": 0.7029,
+    "per_class": {
+      "green light": 0.6786,
+      "red light": 0.7344,
+      "yellow light": 0.6957
+    },
+    "minutes": 6.99,
+    "llm_seconds": 9.9,
+    "run_name": "llm_haiku_s0_i09",
+    "verdict": "regressed",
+    "diagnosis": "The latest run (iteration 8) regressed to 0.7063 mAP despite reaching 0.7091 at epoch 100. The training curve reveals a critical pathology: the learning rate decays too aggressively (reaching 0.000036 by epoch 100), causing the optimizer to become nearly frozen in the final epochs. While train loss continues to decrease (0.654 → 0.641), validation loss plateaus (0.845 → 0.836) and mAP stagnates after epoch 73. This indicates the model has converged to a local minimum and the tiny learning rate prevents escape or refinement. The widening train-val gap (0.0241 → 0.1407) is not overfitting but rather a symptom of the learning rate becoming too small to make meaningful updates on the validation distribution. The best configuration (iteration 5, mAP 0.7153) used lrf=0.01, which also decays quickly but apparently found a better initialization or convergence point. The problem is not the decay rate per se, but rather that the current learning rate schedule is not well-matched to the optimization landscape of this small dataset.",
+    "hypothesis": "Iteration 5 achieved the best mAP (0.7153) with lrf=0.01, cls=1.0, and hsv_v=0.3. The subsequent attempts (iterations 6-8) to improve upon it by adjusting lrf, momentum, or other parameters all regressed. Rather than continuing to tweak the learning rate schedule, I will test an untested parameter: warmup_epochs. The current warmup of 3.0 epochs may be insufficient for a nano model on a small dataset to establish good initial feature representations before the learning rate begins decaying. By increasing warmup_epochs from 3.0 to 4.5, the model will have more time to learn robust initial features with a higher learning rate before entering the decay phase. This should allow the model to start from a better point in the loss landscape, making the subsequent decay schedule more effective and preventing premature convergence to suboptimal minima. Additionally, I will slightly increase weight_decay from 0.0005 to 0.0008 to add modest regularization that may help stabilize the optimization in the later epochs without the over-regularization that failed in iteration 2.",
+    "changes": [
+      {
+        "param": "warmup_epochs",
+        "from": 3.0,
+        "to": 4.5,
+        "reason": "Warmup_epochs has never been tested in the search history. A longer warmup phase will allow the model to establish better initial feature representations before the learning rate decay begins, potentially improving convergence quality and preventing the premature stagnation observed in iterations 6-8."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0008,
+        "reason": "Modest increase in regularization to stabilize late-stage optimization. Iteration 2 showed that 0.0012 was too aggressive, but 0.0008 is a conservative middle ground that may help prevent the train-val loss divergence without harming the class discrimination gains from cls=1.0."
+      }
+    ],
+    "base_iteration": 5,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  },
+  {
+    "iteration": 10,
+    "backend": "haiku",
+    "hyp": {
+      "lr0": 0.001429,
+      "lrf": 0.025,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "warmup_epochs": 3.0,
+      "box": 7.5,
+      "cls": 1.0,
+      "hsv_v": 0.3,
+      "mosaic": 1.0
+    },
+    "map50": 0.9318,
+    "map5095": 0.7068,
+    "per_class": {
+      "green light": 0.6807,
+      "red light": 0.7469,
+      "yellow light": 0.6928
+    },
+    "minutes": 6.82,
+    "llm_seconds": 10.3,
+    "run_name": "llm_haiku_s0_i10",
+    "verdict": "regressed",
+    "diagnosis": "Iteration 9 regressed to 0.7029 mAP, confirming that increasing warmup_epochs to 4.5 and weight_decay to 0.0008 were counterproductive. The training curve reveals a critical pattern: the model reaches its best mAP (0.7025) at epoch 81, but the learning rate has already decayed to near-zero (0.000241 by epoch 85). The widening train-val loss gap (0.0357 → 0.1587) indicates the model is overfitting in the later epochs—training loss continues to decrease while validation loss plateaus, yet mAP does not improve. This suggests the model is learning spurious training-set patterns rather than generalizable features. The 44% of budget spent after epoch 56 yielding only marginal gains indicates premature convergence to a suboptimal solution. The root cause is likely that the learning rate decays too aggressively (lrf=0.01 is too steep for a small dataset), causing the model to lock into a conservative local minimum before exploring better regions. Additionally, the increased warmup (4.5 epochs) and weight_decay (0.0008) added unnecessary regularization that prevented the model from reaching the performance level of iteration 5.",
+    "hypothesis": "Iteration 5 achieved the best mAP (0.7153) with a well-balanced configuration. The regression in iteration 9 was caused by increasing warmup_epochs and weight_decay, both of which should be reverted. However, the core issue remains: the learning rate schedule (lrf=0.01) decays too quickly for a small dataset, causing the model to converge prematurely and then overfit in the later epochs. By increasing lrf from 0.01 to 0.025, the learning rate will decay more gradually, maintaining a productive optimization signal through epoch 100 and allowing the model to escape the local minimum that iteration 5 settled into. This slower decay will keep the learning rate in a range where meaningful updates are still possible in epochs 70-100, preventing the overfitting pattern observed in iteration 9 while preserving the strong class discrimination (cls=1.0) and reduced augmentation intensity (hsv_v=0.3) that made iteration 5 successful.",
+    "changes": [
+      {
+        "param": "lrf",
+        "from": 0.01,
+        "to": 0.025,
+        "reason": "Iteration 5's lrf=0.01 causes the learning rate to decay too steeply, reaching near-zero by epoch 85 and locking the model into a suboptimal solution. Increasing to 0.025 will extend the productive optimization window, allowing the model to continue refining its solution in the later epochs and escape the local minimum that iteration 5 settled into. This is a measured increase that avoids the over-exploration seen in iterations 3 (lrf=0.08) and 4 (lrf=0.02)."
+      },
+      {
+        "param": "warmup_epochs",
+        "from": 3.0,
+        "to": 3.0,
+        "reason": "Reverting to the baseline warmup of 3.0 epochs, as iteration 9's increase to 4.5 regressed performance. The baseline warmup is sufficient for the nano model on this small dataset."
+      },
+      {
+        "param": "weight_decay",
+        "from": 0.0005,
+        "to": 0.0005,
+        "reason": "Reverting to the baseline weight_decay of 0.0005, as iteration 9's increase to 0.0008 regressed performance and added unnecessary regularization that prevented the model from reaching iteration 5's performance level."
+      }
+    ],
+    "base_iteration": 5,
+    "duplicate_of": null,
+    "notes": [],
+    "parse_error": null
+  }
+]
